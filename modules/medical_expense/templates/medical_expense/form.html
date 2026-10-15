@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+
+{% block title %}เบิกจ่ายค่ารักษาพยาบาล - ระบบเอกสารราชการ{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ===== Page Layout ===== */
+  .medical-form-wrap { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  /* ===== Section Cards ===== */
+  .form-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .form-section:hover {
+    box-shadow: 0 6px 24px rgba(168, 85, 247, 0.05);
+  }
+  .form-section-title {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-size: 1.05rem; font-weight: 700;
+    color: #a855f7; /* Purple Theme for Medical */
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-section-title .material-symbols-rounded { font-size: 1.4rem; }
+
+  /* ===== Inline grid ===== */
+  .field-row { display: grid; gap: 1rem; margin-bottom: 1rem; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 768px) { .cols-2, .cols-3 { grid-template-columns: 1fr; } }
+
+  /* ===== Form Inputs ===== */
+  .form-group label {
+    display: block; font-weight: 600; font-size: 0.85rem;
+    color: var(--text-primary); margin-bottom: 0.4rem;
+  }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 0.6rem 0.8rem; font-size: 0.9rem;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface-alt, var(--surface));
+    color: var(--text-primary); box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none; border-color: #a855f7;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+  }
+
+  /* Select Option color consistency */
+  select option {
+    background-color: var(--surface);
+    color: var(--text-primary);
+  }
+
+  /* ===== Radio Groups ===== */
+  .radio-group {
+    display: flex; gap: 1.5rem; margin-top: 0.5rem;
+  }
+  .radio-option {
+    display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+  }
+  .radio-option input[type="radio"] {
+    width: auto; cursor: pointer; accent-color: #a855f7;
+  }
+
+  /* ===== Toggle Switches ===== */
+  .toggle-wrap {
+    display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem;
+  }
+  .switch {
+    position: relative; display: inline-block; width: 46px; height: 24px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #475569; transition: .3s; border-radius: 24px;
+  }
+  .slider:before {
+    position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+    background-color: white; transition: .3s; border-radius: 50%;
+  }
+  input:checked + .slider { background-color: #a855f7; }
+  input:checked + .slider:before { transform: translateX(22px); }
+
+  /* ===== Dependent Group Dropdown ===== */
+  .dependent-select-wrap {
+    display: flex; gap: 0.75rem; align-items: center;
+  }
+  .btn-add-dependent-inline {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    background: transparent; border: 1.5px dashed #a855f7;
+    color: #a855f7; font-weight: 600; font-size: 0.85rem;
+    padding: 0.55rem 0.9rem; border-radius: 10px; cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    white-space: nowrap; height: 38px;
+  }
+  .btn-add-dependent-inline:hover {
+    background: rgba(168, 85, 247, 0.08);
+  }
+
+  /* ===== Page Header ===== */
+  .page-header {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .page-header-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: rgba(168, 85, 247, 0.15);
+    color: #a855f7; display: flex; align-items: center; justify-content: center;
+  }
+  .page-header-title h1 { font-size: 1.4rem; font-weight: 800; margin: 0; }
+  .page-header-title p { font-size: 0.82rem; color: var(--text-muted); margin: 2px 0 0 0; }
+
+  /* ===== AJAX Dependent Modal ===== */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000; animation: fadeIn 0.2s ease-out;
+  }
+  .modal-card {
+    background: #1e293b; border: 1px solid var(--border);
+    border-radius: 16px; padding: 2rem; width: 420px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    display: flex; flex-direction: column; gap: 1.25rem;
+  }
+  .modal-title {
+    font-size: 1.2rem; font-weight: 700; color: #a855f7;
+    margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .modal-actions {
+    display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;
+  }
+
+  .field-error {
+    color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem; display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="medical-form-wrap">
+  
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-header-icon">
+      <span class="material-symbols-rounded" style="font-size:1.8rem;">{% if is_edit %}edit_document{% else %}medical_services{% endif %}</span>
+    </div>
+    <div class="page-header-title">
+      <h1>{% if is_edit %}แก้ไขคำร้องเบิกค่ารักษาพยาบาล (เอกสาร #{{ edit_id }}){% else %}ขออนุมัติเบิกจ่ายค่ารักษาพยาบาล{% endif %}</h1>
+      <p>{% if is_edit %}แก้ไขข้อมูลและบันทึกอัปเดตไฟล์เอกสารใหม่อัตโนมัติ{% else %}ยื่นเอกสารขอรับเงินสวัสดิการช่วยเหลือรักษาพยาบาล สำหรับตนเองและครอบครัวพนักงาน{% endif %}</p>
+    </div>
+  </div>
+
+  <form method="POST" id="medicalForm">
+    
+    <!-- SECTION A: บุคลากรผู้ขอเบิกและสิทธิ์ -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="material-symbols-rounded">person</span>
+        <span>ข้อมูลพนักงานผู้ขอสิทธิ์เบิกจ่าย</span>
+      </div>
+
+      <!-- Staff Selector -->
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label for="staff_id">ผู้ขออนุมัติเบิกสวัสดิการ *</label>
+        <select id="staff_id" name="staff_id" required>
+          <option value="">-- เลือกรายชื่อพนักงาน --</option>
+          {% for member in staff_members %}
+            <option value="{{ member.id }}" {% if form_data.staff_id|string == member.id|string %}selected{% endif %}>
+              {{ member.full_name }} ({% if member.position %}{{ member.position }}{% else %}-{% endif %}) - {{ member.department or 'แผนกงาน' }}
+            </option>
+          {% endfor %}
+        </select>
+        {% if errors.staff_id %}
+          <span class="field-error">{{ errors.staff_id }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Beneficiary Selection -->
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label>ขอเบิกรับเงินช่วยเหลือสวัสดิการสำหรับ *</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="beneficiary_type" value="self" 
+                   {% if not form_data.beneficiary_type or form_data.beneficiary_type == 'self' %}checked{% endif %}>
+            <span>ตนเอง (พนักงานผู้ขอสิทธิ์)</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="beneficiary_type" value="dependent"
+                   {% if form_data.beneficiary_type == 'dependent' %}checked{% endif %}>
+            <span>บุตร (ผู้พึ่งพิงของพนักงาน)</span>
+          </label>
+        </div>
+        {% if errors.beneficiary_type %}
+          <span class="field-error">{{ errors.beneficiary_type }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Dependent Selector (Shown conditionally) -->
+      <div class="form-group" id="dependentSelectorGroup" style="display: none; margin-bottom: 1.25rem; animation: fadeIn 0.2s ease-out;">
+        <label for="dependent_id">รายชื่อบุตรที่ร่วมเบิกสิทธิ์ *</label>
+        <div class="dependent-select-wrap">
+          <select id="dependent_id" name="dependent_id" style="flex: 1;">
+            <option value="">-- เลือกรายชื่อบุตร --</option>
+            <!-- Dynamic ajax loaded options -->
+          </select>
+          <button type="button" class="btn-add-dependent-inline" id="btnOpenModal">
+            <span class="material-symbols-rounded" style="font-size: 1.1rem;">person_add</span>
+            <span>เพิ่มบุตรใหม่</span>
+          </button>
+        </div>
+        {% if errors.dependent_id %}
+          <span class="field-error">{{ errors.dependent_id }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- SECTION B: รายละเอียดการเข้ารับการรักษาและค่าใช้จ่าย -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="material-symbols-rounded">local_hospital</span>
+        <span>รายละเอียดการรักษาและใบเสร็จ</span>
+      </div>
+
+      <!-- Hospital and Dates -->
+      <div class="field-row cols-2">
+        <div class="form-group">
+          <label for="facility_id">สถานพยาบาลที่รับการรักษา *</label>
+          <select id="facility_id" name="facility_id" required>
+            <option value="">-- เลือกชื่อสถานพยาบาล --</option>
+            {% for fac in facilities %}
+              <option value="{{ fac.id }}" {% if form_data.facility_id|string == fac.id|string %}selected{% endif %}>
+                {{ fac.facility_name }} ({{ fac.facility_type or 'รัฐบาล' }})
+              </option>
+            {% endfor %}
+          </select>
+          {% if errors.facility_id %}
+            <span class="field-error">{{ errors.facility_id }}</span>
+          {% endif %}
+        </div>
+
+        <div class="field-row cols-2" style="margin-bottom:0;">
+          <div class="form-group">
+            <label for="treatment_date_start">ตั้งแต่วันที่ *</label>
+            <input type="date" id="treatment_date_start" name="treatment_date_start" 
+                   value="{{ form_data.treatment_date_start or '' }}" required>
+            {% if errors.treatment_date_start %}
+              <span class="field-error">{{ errors.treatment_date_start }}</span>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label for="treatment_date_end">ถึงวันที่ *</label>
+            <input type="date" id="treatment_date_end" name="treatment_date_end" 
+                   value="{{ form_data.treatment_date_end or '' }}" required>
+            {% if errors.treatment_date_end %}
+              <span class="field-error">{{ errors.treatment_date_end }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Amount and Receipt count -->
+      <div class="field-row cols-3">
+        <div class="form-group">
+          <label for="amount_requested">จำนวนเงินที่ระบุในใบเสร็จ (บาท) *</label>
+          <input type="number" id="amount_requested" name="amount_requested" step="0.01" min="0.01" 
+                 value="{{ form_data.amount_requested or '' }}" required placeholder="เช่น 1500.00">
+          {% if errors.amount_requested %}
+            <span class="field-error">{{ errors.amount_requested }}</span>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="receipt_count">จำนวนใบเสร็จ (ใบ) *</label>
+          <input type="number" id="receipt_count" name="receipt_count" min="1" step="1" 
+                 value="{{ form_data.receipt_count or '1' }}" required placeholder="จำนวนใบเสร็จ">
+          {% if errors.receipt_count %}
+            <span class="field-error">{{ errors.receipt_count }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Full Amount Switch -->
+        <div class="form-group">
+          <label>ระดับการเบิกสวัสดิการ</label>
+          <div class="toggle-wrap">
+            <label class="switch">
+              <input type="checkbox" id="is_full_amount" name="is_full_amount" value="1"
+                     {% if form_data.is_full_amount|default('1') == '1' %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+            <span id="fullAmountStatusLabel" style="font-size:0.9rem; font-weight:600; color:var(--text-secondary);">เบิกเต็มจำนวน</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Approved amount (shown conditionally) -->
+      <div class="form-group" id="approvedAmountGroup" style="margin-top: 1rem; display: none; animation: fadeIn 0.25s ease-out;">
+        <label for="amount_approved">จำนวนเงินที่เบิกได้จริงตามสิทธิ์ (บาท) *</label>
+        <input type="number" id="amount_approved" name="amount_approved" step="0.01" min="0.01" 
+               value="{{ form_data.amount_approved or '' }}" placeholder="เช่น 1200.00">
+        <small style="color:var(--text-muted); font-size:0.8rem; display:block; margin-top:0.25rem;">
+          กรณีกรอกสิทธิ์เบิกจ่ายช่วยเหลือไม่เต็มตามใบเสร็จรับเงิน (เช่น เบิกได้เฉพาะบางหมวด)
+        </small>
+        {% if errors.amount_approved %}
+          <span class="field-error">{{ errors.amount_approved }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Actions block -->
+    <div class="form-actions" style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+      <a href="{% if is_edit %}/admin/{% else %}/{% endif %}" class="btn btn-secondary">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>ย้อนกลับ</span>
+      </a>
+      <button type="submit" class="btn btn-primary" style="padding-left:1.5rem; padding-right:1.5rem; background:#a855f7; border-color:#a855f7;">
+        <span>{% if is_edit %}บันทึกการแก้ไขและอัปเดตเอกสาร{% else %}บันทึกและสร้างเอกสารขอเบิกจ่าย{% endif %}</span>
+        <span class="material-symbols-rounded">{% if is_edit %}save{% else %}article{% endif %}</span>
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<!-- Modal Dialog overlay: Add dependent inline -->
+<div class="modal-overlay" id="addDependentModal">
+  <div class="modal-card">
+    <div class="modal-title">
+      <span class="material-symbols-rounded">person_add</span>
+      <span>เพิ่มข้อมูลบุตรใหม่</span>
+    </div>
+    
+    <form id="ajaxDependentForm">
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">
+          กรอกชื่อบุตรของพนักงานท่านนี้ ระบบจะบันทึกและอัปเดตลงใน Dropdown ให้ทันทีโดยไม่ต้องออกไปจากหน้าจอนี้
+        </p>
+        
+        <div class="form-group">
+          <label for="modal_full_name">ชื่อ-นามสกุล บุตร *</label>
+          <input type="text" id="modal_full_name" name="full_name" required placeholder="เด็กชาย / เด็กหญิง / นาย / นางสาว...">
+        </div>
+        
+        <div class="form-group">
+          <label for="modal_relationship">ความสัมพันธ์</label>
+          <input type="text" id="modal_relationship" name="relationship" value="บุตร" placeholder="ความสัมพันธ์ เช่น บุตร">
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btnCloseModal" style="padding: 0.5rem 1rem;">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem; background:#a855f7;">บันทึกข้อมูล</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const staffSelect = document.getElementById('staff_id');
+  const beneficiaryRadios = document.getElementsByName('beneficiary_type');
+  const dependentGroup = document.getElementById('dependentSelectorGroup');
+  const dependentSelect = document.getElementById('dependent_id');
+  
+  const isFullAmountCheckbox = document.getElementById('is_full_amount');
+  const fullAmountStatusLabel = document.getElementById('fullAmountStatusLabel');
+  const approvedAmountGroup = document.getElementById('approvedAmountGroup');
+  const approvedAmountInput = document.getElementById('amount_approved');
+  
+  const dateStart = document.getElementById('treatment_date_start');
+  const dateEnd = document.getElementById('treatment_date_end');
+
+  const addDependentModal = document.getElementById('addDependentModal');
+  const btnOpenModal = document.getElementById('btnOpenModal');
+  const btnCloseModal = document.getElementById('btnCloseModal');
+  const ajaxDependentForm = document.getElementById('ajaxDependentForm');
+
+  // Server-side values passed to render check
+  const serverDependentId = "{{ form_data.dependent_id or '' }}";
+
+  // --- Toggle displays ---
+
+  function toggleBeneficiary() {
+    let typeValue = 'self';
+    for (const r of beneficiaryRadios) {
+      if (r.checked) {
+        typeValue = r.value;
+        break;
+      }
+    }
+    
+    if (typeValue === 'dependent') {
+      dependentGroup.style.display = 'block';
+      dependentSelect.setAttribute('required', 'required');
+      // Load dependents immediately if employee selected
+      loadDependentsForStaff();
+    } else {
+      dependentGroup.style.display = 'none';
+      dependentSelect.removeAttribute('required');
+    }
+  }
+
+  function toggleFullAmount() {
+    if (isFullAmountCheckbox.checked) {
+      fullAmountStatusLabel.textContent = 'เบิกเต็มจำนวน';
+      approvedAmountGroup.style.display = 'none';
+      approvedAmountInput.removeAttribute('required');
+      approvedAmountInput.value = '';
+    } else {
+      fullAmountStatusLabel.textContent = 'ระบุสิทธิ์เบิกจ่ายลดลง';
+      approvedAmountGroup.style.display = 'block';
+      approvedAmountInput.setAttribute('required', 'required');
+    }
+  }
+
+  // --- AJAX dependent loader ---
+
+  function loadDependentsForStaff(callback) {
+    const staffId = staffSelect.value;
+    if (!staffId) {
+      dependentSelect.innerHTML = '<option value="">-- กรุณาเลือกพนักงานผู้ขอเบิกก่อน --</option>';
+      return;
+    }
+
+    dependentSelect.innerHTML = '<option value="">-- กำลังโหลดข้อมูลบุตร... --</option>';
+
+    fetch(`/medical-expense/api/dependents/${staffId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          if (data.dependents.length === 0) {
+            dependentSelect.innerHTML = '<option value="">-- ไม่พบข้อมูลบุตรพนักงาน (คลิกเพิ่มด้านข้าง) --</option>';
+          } else {
+            let html = '<option value="">-- เลือกรายชื่อบุตร --</option>';
+            data.dependents.forEach(dep => {
+              const selected = dep.id.toString() === serverDependentId.toString() ? 'selected' : '';
+              html += `<option value="${dep.id}" ${selected}>${dep.full_name} (${dep.relationship})</option>`;
+            });
+            dependentSelect.innerHTML = html;
+          }
+          if (callback) callback();
+        } else {
+          dependentSelect.innerHTML = '<option value="">-- เกิดข้อผิดพลาดในการโหลดข้อมูล --</option>';
+        }
+      })
+      .catch(err => {
+        dependentSelect.innerHTML = '<option value="">-- โหลดข้อมูลไม่สำเร็จ --</option>';
+        console.error(err);
+      });
+  }
+
+  // --- Modal Events ---
+
+  btnOpenModal.addEventListener('click', () => {
+    if (!staffSelect.value) {
+      alert('กรุณาเลือกพนักงานผู้ขออนุมัติเบิกจ่ายก่อนเพิ่มข้อมูลบุตร');
+      staffSelect.focus();
+      return;
+    }
+    addDependentModal.style.display = 'flex';
+  });
+
+  btnCloseModal.addEventListener('click', () => {
+    addDependentModal.style.display = 'none';
+    ajaxDependentForm.reset();
+  });
+
+  ajaxDependentForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const staffId = staffSelect.value;
+    const nameVal = document.getElementById('modal_full_name').value.trim();
+    const relVal = document.getElementById('modal_relationship').value.trim();
+
+    if (!nameVal) return;
+
+    const formData = new FormData();
+    formData.append('staff_id', staffId);
+    formData.append('full_name', nameVal);
+    formData.append('relationship', relVal);
+
+    fetch('/medical-expense/api/dependents/add', {
+      method: 'POST',
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          // Re-load and pre-select the newly added dependent
+          loadDependentsForStaff(() => {
+            dependentSelect.value = data.dependent.id;
+          });
+          // Close modal
+          addDependentModal.style.display = 'none';
+          ajaxDependentForm.reset();
+        } else {
+          alert('ไม่สามารถเพิ่มข้อมูลได้: ' + (data.error || 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ'));
+        }
+      })
+      .catch(err => {
+        alert('เกิดข้อผิดพลาดในการส่งข้อมูล');
+        console.error(err);
+      });
+  });
+
+  // --- Dates Check ---
+  function validateDateRange() {
+    if (dateStart.value && dateEnd.value) {
+      if (dateEnd.value < dateStart.value) {
+        dateEnd.setCustomValidity('วันที่สิ้นสุดการรักษาห้ามมาก่อนวันที่เริ่มต้นการรักษา');
+        dateEnd.style.borderColor = 'var(--danger)';
+      } else {
+        dateEnd.setCustomValidity('');
+        dateEnd.style.borderColor = '';
+      }
+    }
+  }
+
+  // --- Bind event listeners ---
+
+  staffSelect.addEventListener('change', () => {
+    loadDependentsForStaff();
+  });
+  
+  for (const r of beneficiaryRadios) {
+    r.addEventListener('change', toggleBeneficiary);
+  }
+
+  isFullAmountCheckbox.addEventListener('change', toggleFullAmount);
+  dateStart.addEventListener('change', validateDateRange);
+  dateEnd.addEventListener('change', validateDateRange);
+
+  // Initial runs
+  toggleBeneficiary();
+  toggleFullAmount();
+
+  // If restoring form from errors, check if beneficiary is dependent and staff has a value
+  if (staffSelect.value && "{{ form_data.beneficiary_type }}" === "dependent") {
+    loadDependentsForStaff();
+  }
+
+})();
+</script>
+{% endblock %}

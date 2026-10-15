@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}หน้าแรก - ระบบจัดการเอกสารราชการ{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>ระบบเอกสารราชการอิเล็กทรอนิกส์</h1>
+    <p>หน่วยงานเทคโนโลยีควบคุมผลิต กรค. ยินดีต้อนรับ</p>
+</div>
+
+<div class="module-grid">
+    {% for module in modules %}
+        <div class="glass-card module-card" onclick="window.location.href='{{ module.url_prefix }}'">
+            <div>
+                <div class="module-header">
+                    <div class="module-icon">
+                        <span class="material-symbols-rounded">{{ module.icon }}</span>
+                    </div>
+                    <div class="module-title">{{ module.title }}</div>
+                </div>
+                <div class="module-desc">
+                    {{ module.description }}
+                </div>
+            </div>
+            <a href="{{ module.url_prefix }}" class="btn btn-primary" style="width: 100%;">
+                <span>เปิดใช้งานโมดูล</span>
+                <span class="material-symbols-rounded">arrow_forward</span>
+            </a>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

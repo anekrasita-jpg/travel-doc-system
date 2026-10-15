@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}ถังขยะกู้คืนเอกสาร - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <div>
+        <h1>ถังขยะรายการที่ลบแล้ว (Trash / Archive)</h1>
+        <p style="color: var(--text-secondary);">กู้คืนเอกสารราชการที่ถูกลบชั่วคราว ข้อมูลทางการเงินจะไม่สูญหายถาวร</p>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="admin-tabs">
+    <a href="{{ url_for('admin.dashboard') }}" class="admin-tab">จัดการเอกสารราชการ</a>
+    <a href="{{ url_for('admin.staff_manage') }}" class="admin-tab">จัดการข้อมูลพนักงาน</a>
+    <a href="{{ url_for('admin.master_manage') }}" class="admin-tab">ตั้งค่าข้อมูลอ้างอิง (Master Data)</a>
+    <a href="{{ url_for('admin.dependents_manage') }}" class="admin-tab">จัดการข้อมูลบุตร</a>
+    <a href="{{ url_for('admin.trash') }}" class="admin-tab active" style="color: #f87171;"><span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle; margin-right:4px;">delete</span>รายการที่ลบแล้ว</a>
+</div>
+
+<!-- Section: Travel Approvals -->
+<div class="glass-card" style="margin-bottom: 2.5rem; padding: 2rem;">
+    <h2 style="font-size: 1.4rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: #f87171;">
+        <span class="material-symbols-rounded">delete</span>
+        <span>คำขออนุมัติเดินทางที่ลบแล้ว</span>
+        <span style="font-size:0.85rem; font-weight:400; color:var(--text-secondary);">({{ approvals|length }} รายการ)</span>
+    </h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ลำดับ</th>
+                    <th>ผู้ยื่นคำร้อง</th>
+                    <th>เลขที่หนังสือ</th>
+                    <th>วันที่เดินทาง</th>
+                    <th>วัตถุประสงค์</th>
+                    <th>สถานะ</th>
+                    <th>การจัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in approvals %}
+                <tr>
+                    <td>{{ app.id }}</td>
+                    <td><strong>{{ app.staff_name }}</strong></td>
+                    <td>{{ app.document_number or '-' }}</td>
+                    <td>{{ app.travel_date_thai }}</td>
+                    <td>{{ app.purpose }}</td>
+                    <td>
+                        <span class="badge badge-{{ app.status }}">{{ app.status }}</span>
+                    </td>
+                    <td>
+                        <form action="{{ url_for('admin.restore', doc_type='travel_approval', doc_id=app.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('คุณต้องการกู้คืนเอกสารนี้กลับไปที่แผงควบคุมหลักใช่หรือไม่?')">
+                            <button type="submit" class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; background: #10b981; border-color: #10b981;">
+                                <span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle; margin-right: 2px;">restore</span> กู้คืน
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-secondary);">ไม่มีประวัติคำขออนุมัติเดินทางที่ถูกลบ</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Row for Expenses -->
+<div style="display: grid; grid-template-columns: 1fr; gap: 2rem;">
+    <!-- Travel Expenses -->
+    <div class="glass-card" style="padding: 2rem;">
+        <h2 style="font-size: 1.4rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: #f87171;">
+            <span class="material-symbols-rounded">delete</span>
+            <span>รายการเบิกจ่ายค่าเดินทางที่ลบแล้ว</span>
+            <span style="font-size:0.85rem; font-weight:400; color:var(--text-secondary);">({{ expenses|length }} รายการ)</span>
+        </h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ลำดับ</th>
+                        <th>ผู้ยื่นคำร้อง</th>
+                        <th>เชื่อมโยงอนุมัติเดินทาง</th>
+                        <th>จำนวนเงิน (บาท)</th>
+                        <th>วันที่เบิกเงิน</th>
+                        <th>การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exp in expenses %}
+                    <tr>
+                        <td>{{ exp.id }}</td>
+                        <td><strong>{{ exp.staff_name }}</strong></td>
+                        <td>{{ exp.approval_document_number or '-' }}</td>
+                        <td style="color: var(--accent); font-weight: 600;">{{ "{:,.2f}".format(exp.amount) }}</td>
+                        <td>{{ exp.expense_date_thai }}</td>
+                        <td>
+                            <form action="{{ url_for('admin.restore', doc_type='travel_expense', doc_id=exp.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('คุณต้องการกู้คืนเอกสารนี้กลับไปที่แผงควบคุมหลักใช่หรือไม่?')">
+                                <button type="submit" class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; background: #10b981; border-color: #10b981;">
+                                    <span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle; margin-right: 2px;">restore</span> กู้คืน
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-secondary);">ไม่มีประวัติการเบิกจ่ายค่าเดินทางที่ถูกลบ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Medical Expenses -->
+    <div class="glass-card" style="padding: 2rem;">
+        <h2 style="font-size: 1.4rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: #f87171;">
+            <span class="material-symbols-rounded">delete</span>
+            <span>รายการเบิกจ่ายค่ารักษาพยาบาลที่ลบแล้ว</span>
+            <span style="font-size:0.85rem; font-weight:400; color:var(--text-secondary);">({{ medicals|length }} รายการ)</span>
+        </h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ลำดับ</th>
+                        <th>ผู้ยื่นคำร้อง</th>
+                        <th>เบิกช่วยเหลือสิทธิ์</th>
+                        <th>สถานพยาบาล</th>
+                        <th>วันที่รับการรักษา</th>
+                        <th>จำนวนเงินขอเบิก</th>
+                        <th>ใบเสร็จ</th>
+                        <th>จำนวนเงินจ่ายจริง</th>
+                        <th>การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for med in medicals %}
+                    <tr>
+                        <td>{{ med.id }}</td>
+                        <td><strong>{{ med.staff_name }}</strong></td>
+                        <td>
+                            {% if med.beneficiary_type == 'self' %}
+                                <span class="badge badge-approved" style="background:rgba(16,185,129,0.06); border-color:rgba(16,185,129,0.3); color:#10b981;">ตนเอง</span>
+                            {% else %}
+                                <span class="badge badge-pending" style="background:rgba(168,85,247,0.06); border-color:rgba(168,85,247,0.3); color:#a855f7;">บุตร ({{ med.dependent_name or '-' }})</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ med.hospital_name }}</td>
+                        <td>{{ med.treatment_date_thai }}</td>
+                        <td style="color: var(--text-secondary);">{{ "{:,.2f}".format(med.amount_requested) }} บาท</td>
+                        <td>{{ med.receipt_count }} ใบ</td>
+                        <td style="color: #a855f7; font-weight: 700;">{{ "{:,.2f}".format(med.amount_approved) }} บาท</td>
+                        <td>
+                            <form action="{{ url_for('admin.restore', doc_type='medical_expense', doc_id=med.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('คุณต้องการกู้คืนเอกสารนี้กลับไปที่แผงควบคุมหลักใช่หรือไม่?')">
+                                <button type="submit" class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; background: #10b981; border-color: #10b981;">
+                                    <span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle; margin-right: 2px;">restore</span> กู้คืน
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: var(--text-secondary);">ไม่มีประวัติการเบิกค่ารักษาพยาบาลที่ถูกลบ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

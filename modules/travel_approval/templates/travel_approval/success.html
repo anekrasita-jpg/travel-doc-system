@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}ยื่นขออนุมัติเดินทางสำเร็จ - ระบบเอกสารราชการ{% endblock %}
+
+{% block extra_head %}
+<style>
+  .success-container {
+    max-width: 600px;
+    margin: 2.5rem auto;
+    text-align: center;
+  }
+  .success-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    transition: transform 0.2s ease;
+  }
+  .success-icon-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .success-icon-wrap .material-symbols-rounded {
+    font-size: 3rem;
+  }
+  .success-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .success-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    max-width: 440px;
+    line-height: 1.5;
+  }
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    text-align: left;
+  }
+  .summary-table th, .summary-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+  .summary-table th {
+    font-weight: 600;
+    color: var(--text-secondary);
+    width: 40%;
+  }
+  .summary-table td {
+    color: var(--text-primary);
+  }
+  .button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    margin-top: 1rem;
+  }
+  .btn-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: transform 0.2s, background-color 0.2s, color 0.2s;
+    cursor: pointer;
+  }
+  .btn-primary-blue {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+  }
+  .btn-primary-blue:hover {
+    background: var(--accent-hover, #4f46e5);
+    transform: translateY(-2px);
+  }
+  .btn-secondary-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+  .btn-secondary-outline:hover {
+    background: var(--border);
+    transform: translateY(-1px);
+  }
+  .btn-link {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+  }
+  .btn-link:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="success-container">
+  <div class="success-card">
+    <div class="success-icon-wrap">
+      <span class="material-symbols-rounded">check_circle</span>
+    </div>
+    
+    <div>
+      <h1 class="success-title">ส่งขออนุมัติเดินทางสำเร็จ</h1>
+      <p class="success-subtitle">ข้อมูลการขออนุมัติเดินทางไปราชการได้รับการบันทึกลงในระบบและสร้างเอกสารแล้ว</p>
+    </div>
+
+    <table class="summary-table">
+      <tr>
+        <th>เลขที่เอกสารคำขอ</th>
+        <td>#{{ approval.id }}</td>
+      </tr>
+      <tr>
+        <th>เลขที่หนังสือ</th>
+        <td>{{ approval.document_number or '-' }}</td>
+      </tr>
+      <tr>
+        <th>ชื่อผู้ขออนุมัติเดินทาง</th>
+        <td>{{ approval.staff_name }}</td>
+      </tr>
+    </table>
+
+    <div class="button-group">
+      {% if approval.pdf_path %}
+      <a href="{{ url_for('travel_approval.view_pdf', filename=approval.pdf_path) }}" target="_blank" class="btn-action btn-primary-blue">
+        <span class="material-symbols-rounded">picture_as_pdf</span>
+        ดู/พิมพ์เอกสาร (.pdf)
+      </a>
+      {% endif %}
+
+      {% if approval.docx_path %}
+      <a href="{{ url_for('travel_approval.download_file', filename=approval.docx_path) }}" class="btn-action btn-secondary-outline">
+        <span class="material-symbols-rounded">description</span>
+        ดาวน์โหลดเอกสารนำส่ง (.docx)
+      </a>
+      {% endif %}
+
+      <a href="{{ url_for('travel_approval.form') }}" class="btn-action btn-link">
+        กลับไปหน้าฟอร์มขออนุมัติ
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

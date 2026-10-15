@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}ขออนุมัติเดินทาง - ระบบเอกสารราชการ{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+    <div class="form-title">
+        <span class="material-symbols-rounded" style="font-size: 2.25rem; color: var(--primary);">flight_takeoff</span>
+        <span>แบบฟอร์มขออนุมัติเดินทางไปราชการ</span>
+    </div>
+
+    <form method="POST">
+        <div class="form-grid">
+            <!-- Staff Name Dropdown -->
+            <div class="form-group">
+                <label for="staff_id">ผู้ขออนุมัติเดินทาง *</label>
+                <select id="staff_id" name="staff_id" required>
+                    <option value="">-- เลือกรายชื่อพนักงาน --</option>
+                    {% for member in staff_members %}
+                        <option value="{{ member.id }}" {% if form_data.staff_id|string == member.id|string %}selected{% endif %}>
+                            {{ member.full_name }} ({{ member.position }}) - {{ member.department }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if errors.staff_id %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.staff_id }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Document Number -->
+            <div class="form-group">
+                <label for="document_number">เลขที่หนังสืออนุมัติ (ถ้ามี)</label>
+                <input type="text" id="document_number" name="document_number" value="{{ form_data.document_number or '' }}" placeholder="เช่น ว 123/2569">
+                {% if errors.document_number %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.document_number }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Travel Date Start & End -->
+            <div class="form-group">
+                <label for="date_start">วันที่เริ่มเดินทาง *</label>
+                <input type="date" id="date_start" name="date_start" value="{{ form_data.date_start or '' }}" required>
+                {% if errors.date_start %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.date_start }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="date_end">วันที่สิ้นสุดเดินทาง *</label>
+                <input type="date" id="date_end" name="date_end" value="{{ form_data.date_end or '' }}" required>
+                {% if errors.date_end %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.date_end }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Purpose -->
+            <div class="form-group full-width">
+                <label for="purpose">วัตถุประสงค์ในการปฏิบัติงาน *</label>
+                <textarea id="purpose" name="purpose" required placeholder="ระบุวัตถุประสงค์ เช่น เข้าดำเนินการตรวจซ่อมระบบควบคุมผลิต ณ..." rows="4">{{ form_data.purpose or '' }}</textarea>
+                {% if errors.purpose %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.purpose }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="/" class="btn btn-secondary">
+                <span class="material-symbols-rounded">arrow_back</span>
+                <span>ย้อนกลับ</span>
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <span>ยื่นขออนุมัติและออกเอกสาร Word</span>
+                <span class="material-symbols-rounded">article</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}เบิกจ่ายค่าเดินทาง - ระบบเอกสารราชการ{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+    <div class="form-title">
+        <span class="material-symbols-rounded" style="font-size: 2.25rem; color: var(--accent);">payments</span>
+        <span>แบบฟอร์มขอเบิกจ่ายค่าเดินทางปฏิบัติงาน</span>
+    </div>
+
+    <form method="POST">
+        <div class="form-grid">
+            <!-- Travel Approval Ref Dropdown -->
+            <div class="form-group full-width">
+                <label for="approval_id">อ้างอิงใบอนุมัติเดินทาง (ระบบจะดึงชื่อพนักงานผู้ขออัตโนมัติ) *</label>
+                <select id="approval_id" name="approval_id" required>
+                    <option value="">-- เลือกใบอนุมัติเดินทางที่เป็นแหล่งอ้างอิง --</option>
+                    {% for app in approvals %}
+                        <option value="{{ app.id }}" {% if form_data.approval_id|string == app.id|string %}selected{% endif %}>
+                            ใบอนุมัติ #{{ app.id }} | {{ app.full_name }} - ไปปฏิบัติงาน: {{ app.purpose }} เมื่อ {{ app.travel_date_thai }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if errors.approval_id %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.approval_id }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Amount -->
+            <div class="form-group">
+                <label for="amount">จำนวนเงินที่ขอเบิกจ่าย (บาท) *</label>
+                <input type="number" id="amount" name="amount" step="0.01" min="0.01" value="{{ form_data.amount or '' }}" required placeholder="กรอกจำนวนเงินเบิกจ่าย เช่น 1500.00">
+                {% if errors.amount %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.amount }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Expense Date -->
+            <div class="form-group">
+                <label for="expense_date">วันที่ต้องการเบิกเงิน *</label>
+                <input type="date" id="expense_date" name="expense_date" value="{{ form_data.expense_date or '' }}" required>
+                {% if errors.expense_date %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.expense_date }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="/" class="btn btn-secondary">
+                <span class="material-symbols-rounded">arrow_back</span>
+                <span>ย้อนกลับ</span>
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <span>บันทึกและออกเอกสารเบิกจ่าย</span>
+                <span class="material-symbols-rounded">article</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

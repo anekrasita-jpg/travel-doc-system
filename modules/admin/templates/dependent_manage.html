@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}จัดการข้อมูลบุตรพนักงาน - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <div>
+        <h1>จัดการข้อมูลบุตรพนักงาน (Dependent Management)</h1>
+        <p style="color: var(--text-secondary);">จัดการข้อมูลบุตรพนักงานสำหรับนำไปใช้เบิกสิทธิ์สวัสดิการค่ารักษาพยาบาล</p>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="admin-tabs">
+    <a href="{{ url_for('admin.dashboard') }}" class="admin-tab">จัดการเอกสารราชการ</a>
+    <a href="{{ url_for('admin.staff_manage') }}" class="admin-tab">จัดการข้อมูลพนักงาน</a>
+    <a href="{{ url_for('admin.master_manage') }}" class="admin-tab">ตั้งค่าข้อมูลอ้างอิง (Master Data)</a>
+    <a href="{{ url_for('admin.dependents_manage') }}" class="admin-tab active">จัดการข้อมูลบุตร</a>
+    <a href="{{ url_for('admin.trash') }}" class="admin-tab" style="color: #f87171;"><span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle; margin-right:4px;">delete</span>รายการที่ลบแล้ว</a>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start;">
+    <!-- Dependents List -->
+    <div class="glass-card" style="padding: 2rem;">
+        <h2 style="font-size: 1.4rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span class="material-symbols-rounded" style="color: #a855f7">family_restroom</span>
+            <span>รายชื่อข้อมูลบุตรพนักงานในระบบ</span>
+        </h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ชื่อ-นามสกุล บุตร</th>
+                        <th>ความสัมพันธ์</th>
+                        <th>พนักงาน (ผู้ปกครอง)</th>
+                        <th>วันที่บันทึก</th>
+                        <th>การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dep in dependents_list %}
+                    <tr>
+                        <td>
+                            <span style="font-family: monospace; font-weight: 700; font-size: 0.95rem;
+                                         background: var(--surface-alt, rgba(99,102,241,0.1));
+                                         color: #a855f7; padding: 0.2rem 0.5rem;
+                                         border-radius: 6px; letter-spacing: 0.05em;">
+                                {{ dep.id }}
+                            </span>
+                        </td>
+                        <td><strong>{{ dep.full_name }}</strong></td>
+                        <td>
+                            <span class="badge badge-pending" style="color:#a855f7; border-color: rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.05);">
+                                {{ dep.relationship or 'บุตร' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if dep.staff_name %}
+                                <strong>{{ dep.staff_name }}</strong> <small style="color:var(--text-muted);">(รหัส: {{ dep.staff_id }})</small>
+                            {% else %}
+                                <span style="color: var(--danger);">ไม่พบบุคลากรในระบบ</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ dep.created_at.split(' ')[0] if dep.created_at else '-' }}</td>
+                        <td>
+                            <div class="action-links">
+                                <a href="{{ url_for('admin.dependents_manage', edit_id=dep.id) }}" class="btn btn-secondary" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; display:inline-flex;">
+                                    แก้ไข
+                                </a>
+                                <form action="{{ url_for('admin.delete_dependent', id=dep.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('คุณแน่ใจว่าต้องการลบข้อมูลบุตรคนนี้ใช่หรือไม่?')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.8rem;">ลบ</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-secondary);">ไม่พบข้อมูลบุตรพนักงานในระบบ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Form Section (Add or Edit) -->
+    <div class="glass-card" style="padding: 2rem;">
+        {% if edit_dep %}
+            <h2 style="font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; color: #a855f7;">
+                <span class="material-symbols-rounded">edit</span>
+                <span>แก้ไขข้อมูลบุตร</span>
+            </h2>
+            <form action="{{ url_for('admin.edit_dependent', id=edit_dep.id) }}" method="POST">
+                <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                    <div class="form-group">
+                        <label for="staff_id">พนักงาน (ผู้มีสิทธิ์หลัก) *</label>
+                        <select id="staff_id" name="staff_id" required>
+                            <option value="">-- เลือกพนักงานผู้ปกครอง --</option>
+                            {% for staff in staff_members %}
+                                <option value="{{ staff.id }}" {% if edit_dep.staff_id|string == staff.id|string %}selected{% endif %}>
+                                    {{ staff.full_name }} (รหัส: {{ staff.id }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="full_name">ชื่อ-นามสกุล บุตร *</label>
+                        <input type="text" id="full_name" name="full_name" required value="{{ edit_dep.full_name }}" placeholder="ชื่อนามสกุล">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="relationship">ความสัมพันธ์</label>
+                        <input type="text" id="relationship" name="relationship" value="{{ edit_dep.relationship or 'บุตร' }}" placeholder="เช่น บุตร">
+                    </div>
+
+                    <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                        <a href="{{ url_for('admin.dependents_manage') }}" class="btn btn-secondary" style="flex:1;">ยกเลิก</a>
+                        <button type="submit" class="btn btn-primary" style="flex:1.5; background: #a855f7;">
+                            <span>บันทึกการแก้ไข</span>
+                            <span class="material-symbols-rounded">save</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        {% else %}
+            <h2 style="font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span class="material-symbols-rounded" style="color: #a855f7">person_add</span>
+                <span>เพิ่มข้อมูลบุตรใหม่</span>
+            </h2>
+            <form action="{{ url_for('admin.add_dependent') }}" method="POST">
+                <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                    <div class="form-group">
+                        <label for="staff_id">พนักงาน (ผู้มีสิทธิ์หลัก) *</label>
+                        <select id="staff_id" name="staff_id" required>
+                            <option value="">-- เลือกพนักงานผู้ปกครอง --</option>
+                            {% for staff in staff_members %}
+                                <option value="{{ staff.id }}">{{ staff.full_name }} (รหัส: {{ staff.id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="full_name">ชื่อ-นามสกุล บุตร *</label>
+                        <input type="text" id="full_name" name="full_name" required placeholder="เด็กชาย / เด็กหญิง / นาย / นางสาว...">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="relationship">ความสัมพันธ์</label>
+                        <input type="text" id="relationship" name="relationship" value="บุตร" placeholder="เช่น บุตร">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; background: #a855f7; border-color: #a855f7;">
+                        <span>บันทึกข้อมูลบุตร</span>
+                        <span class="material-symbols-rounded">save</span>
+                    </button>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

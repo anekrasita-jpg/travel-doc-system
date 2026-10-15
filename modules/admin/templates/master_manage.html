@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+
+{% block title %}ตั้งค่าข้อมูลอ้างอิง - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <div>
+        <h1>ตั้งค่าข้อมูลอ้างอิง (Master Data Management)</h1>
+        <p style="color: var(--text-secondary);">จัดการข้อมูลกอง, งาน, ตำแหน่งงาน, อัตราค่าใช้จ่ายสวัสดิการ, ยานพาหนะ และสถานพยาบาล</p>
+    </div>
+</div>
+
+<!-- Main Tabs -->
+<div class="admin-tabs">
+    <a href="{{ url_for('admin.dashboard') }}" class="admin-tab">จัดการเอกสารราชการ</a>
+    <a href="{{ url_for('admin.staff_manage') }}" class="admin-tab">จัดการข้อมูลพนักงาน</a>
+    <a href="{{ url_for('admin.master_manage') }}" class="admin-tab active">ตั้งค่าข้อมูลอ้างอิง (Master Data)</a>
+    <a href="{{ url_for('admin.dependents_manage') }}" class="admin-tab">จัดการข้อมูลบุตร</a>
+    <a href="{{ url_for('admin.trash') }}" class="admin-tab" style="color: #f87171;"><span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle; margin-right:4px;">delete</span>รายการที่ลบแล้ว</a>
+</div>
+
+<!-- Sub Tabs for Master Tables -->
+<div class="admin-tabs sub-tabs" style="margin-top: 1rem; margin-bottom: 2rem; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; flex-wrap: wrap;">
+    <a href="#tab-vehicles" class="admin-tab sub-tab active" onclick="switchSubTab(event, 'tab-vehicles')">ทะเบียนรถ</a>
+    <a href="#tab-rates" class="admin-tab sub-tab" onclick="switchSubTab(event, 'tab-rates')">อัตราเบี้ยเลี้ยง/ที่พัก</a>
+    <a href="#tab-facilities" class="admin-tab sub-tab" onclick="switchSubTab(event, 'tab-facilities')">สถานพยาบาล</a>
+    <a href="#tab-divisions" class="admin-tab sub-tab" onclick="switchSubTab(event, 'tab-divisions')">กอง (Divisions)</a>
+    <a href="#tab-sections" class="admin-tab sub-tab" onclick="switchSubTab(event, 'tab-sections')">งาน (Sections)</a>
+    <a href="#tab-positions" class="admin-tab sub-tab" onclick="switchSubTab(event, 'tab-positions')">ตำแหน่งงาน (Positions)</a>
+    <a href="#tab-vehicle-types" class="admin-tab sub-tab" onclick="switchSubTab(event, 'tab-vehicle-types')">ประเภทรถ</a>
+</div>
+
+<!-- ==========================================
+     SUB-TAB CONTENT 1: VEHICLES
+     ========================================== -->
+<div id="tab-vehicles" class="sub-tab-content">
+    <div style="display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start;">
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span class="material-symbols-rounded" style="color: var(--accent);">directions_car</span>
+                <span>รายการทะเบียนรถยนต์ทั้งหมด</span>
+            </h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>เลขทะเบียนรถ</th>
+                            <th>ประเภทรถ</th>
+                            <th>ผู้ครอบครอง (กรณีรถส่วนตัว)</th>
+                            <th>ปีสัญญา (กรณีรถเช่า กปภ.)</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in vehicles %}
+                        <tr>
+                            <td>{{ v.id }}</td>
+                            <td><strong>{{ v.plate_number }}</strong></td>
+                            <td>{{ v.type_name }}</td>
+                            <td>{{ v.staff_name or '-' }}</td>
+                            <td>{{ v.contract_year or '-' }}</td>
+                            <td>
+                                <form action="{{ url_for('admin.delete_vehicle', id=v.id) }}" method="POST" onsubmit="return confirm('ลบทะเบียนรถนี้?')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">ลบ</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-secondary);">ไม่พบข้อมูลทะเบียนรถ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.2rem; margin-bottom: 1.25rem;">เพิ่มทะเบียนรถใหม่</h2>
+            <form action="{{ url_for('admin.add_vehicle') }}" method="POST">
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="plate_number">เลขทะเบียนรถ *</label>
+                        <input type="text" id="plate_number" name="plate_number" required placeholder="เช่น กข 1234 ระยอง">
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle_type_id">ประเภทรถ *</label>
+                        <select id="vehicle_type_id" name="vehicle_type_id" required>
+                            <option value="">-- เลือกประเภทรถ --</option>
+                            {% for vt in vehicle_types %}
+                                <option value="{{ vt.id }}">{{ vt.type_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff_id">ผู้ครอบครอง (เฉพาะรถส่วนตัว)</label>
+                        <select id="staff_id" name="staff_id">
+                            <option value="">-- เป็นรถส่วนกลาง/รถเช่า กปภ. --</option>
+                            {% for s in staff_members %}
+                                <option value="{{ s.id }}">{{ s.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="contract_year">ปีที่เริ่มทำสัญญา (เฉพาะรถเช่า)</label>
+                        <input type="text" id="contract_year" name="contract_year" placeholder="เช่น 2569">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     SUB-TAB CONTENT 2: RATES
+     ========================================== -->
+<div id="tab-rates" class="sub-tab-content" style="display: none;">
+    <div style="display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start;">
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem;">อัตราเบี้ยเลี้ยงและค่าที่พักรายวัน</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ตำแหน่งงาน</th>
+                            <th>อัตราเบี้ยเลี้ยง (บาท/วัน)</th>
+                            <th>อัตราค่าที่พัก (บาท/คืน)</th>
+                            <th>วันที่เริ่มมีผลใช้บังคับ</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in rates %}
+                        <tr>
+                            <td>{{ r.id }}</td>
+                            <td><strong>{{ r.position_name }}</strong></td>
+                            <td style="color: var(--accent);">{{ "{:,.2f}".format(r.per_diem_rate) }}</td>
+                            <td style="color: var(--primary);">{{ "{:,.2f}".format(r.accommodation_rate) }}</td>
+                            <td>{{ r.effective_date_thai or '-' }}</td>
+                            <td>
+                                <form action="{{ url_for('admin.delete_rate', id=r.id) }}" method="POST" onsubmit="return confirm('ลบอัตรานี้?')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">ลบ</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-secondary);">ไม่พบข้อมูลอัตราเบี้ยเลี้ยง</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.2rem; margin-bottom: 1.25rem;">เพิ่มอัตราเบี้ยเลี้ยง/ที่พัก</h2>
+            <form action="{{ url_for('admin.add_rate') }}" method="POST">
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="position_id_rate">ตำแหน่งงาน *</label>
+                        <select id="position_id_rate" name="position_id" required>
+                            <option value="">-- เลือกตำแหน่ง --</option>
+                            {% for pos in positions %}
+                                <option value="{{ pos.id }}">{{ pos.position_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="per_diem_rate">อัตราเบี้ยเลี้ยงต่อวัน *</label>
+                        <input type="number" id="per_diem_rate" name="per_diem_rate" step="0.01" required placeholder="เช่น 240.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="accommodation_rate">อัตราค่าที่พักต่อคืน *</label>
+                        <input type="number" id="accommodation_rate" name="accommodation_rate" step="0.01" required placeholder="เช่น 1200.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="effective_date">วันที่เริ่มมีผลบังคับใช้</label>
+                        <input type="date" id="effective_date" name="effective_date">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     SUB-TAB CONTENT 3: FACILITIES
+     ========================================== -->
+<div id="tab-facilities" class="sub-tab-content" style="display: none;">
+    <div style="display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start;">
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem;">บัญชีรายชื่อสถานพยาบาล</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ชื่อสถานพยาบาล</th>
+                            <th>ประเภทสถานพยาบาล</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in facilities %}
+                        <tr>
+                            <td>{{ f.id }}</td>
+                            <td><strong>{{ f.facility_name }}</strong></td>
+                            <td>{{ f.facility_type or '-' }}</td>
+                            <td>
+                                <form action="{{ url_for('admin.delete_facility', id=f.id) }}" method="POST" onsubmit="return confirm('ลบสถานพยาบาลนี้?')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">ลบ</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-secondary);">ไม่พบข้อมูลสถานพยาบาล</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.2rem; margin-bottom: 1.25rem;">เพิ่มสถานพยาบาล</h2>
+            <form action="{{ url_for('admin.add_facility') }}" method="POST">
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="facility_name">ชื่อสถานพยาบาล *</label>
+                        <input type="text" id="facility_name" name="facility_name" required placeholder="เช่น โรงพยาบาลระยอง">
+                    </div>
+                    <div class="form-group">
+                        <label for="facility_type">ประเภท (รัฐบาล / เอกชน)</label>
+                        <input type="text" id="facility_type" name="facility_type" placeholder="เช่น รัฐบาล">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     SUB-TAB CONTENT 4: DIVISIONS
+     ========================================== -->
+<div id="tab-divisions" class="sub-tab-content" style="display: none;">
+    <div style="display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start;">
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem;">โครงสร้างระดับ กอง</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ชื่อกอง</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in divisions %}
+                        <tr>
+                            <td>{{ d.id }}</td>
+                            <td><strong>{{ d.division_name }}</strong></td>
+                            <td>
+                                <form action="{{ url_for('admin.delete_division', id=d.id) }}" method="POST" onsubmit="return confirm('ลบกองนี้?')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">ลบ</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: var(--text-secondary);">ไม่พบข้อมูลกอง</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.2rem; margin-bottom: 1.25rem;">เพิ่มหน่วยงานระดับ กอง</h2>
+            <form action="{{ url_for('admin.add_division') }}" method="POST">
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="division_name">ชื่อหน่วยงานระดับกอง *</label>
+                        <input type="text" id="division_name" name="division_name" required placeholder="เช่น กองพัฒนาทรัพยากรบุคคล">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     SUB-TAB CONTENT 5: SECTIONS
+     ========================================== -->
+<div id="tab-sections" class="sub-tab-content" style="display: none;">
+    <div style="display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start;">
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem;">โครงสร้างระดับ งาน/แผนก</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ชื่องาน/แผนก</th>
+                            <th>สังกัดกอง</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in sections %}
+                        <tr>
+                            <td>{{ s.id }}</td>
+                            <td><strong>{{ s.section_name }}</strong></td>
+                            <td>{{ s.division_name or '-' }}</td>
+                            <td>
+                                <form action="{{ url_for('admin.delete_section', id=s.id) }}" method="POST" onsubmit="return confirm('ลบงานนี้?')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">ลบ</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-secondary);">ไม่พบข้อมูลงาน/แผนก</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.2rem; margin-bottom: 1.25rem;">เพิ่มหน่วยงานระดับ งาน</h2>
+            <form action="{{ url_for('admin.add_section') }}" method="POST">
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="section_name">ชื่อแผนก/งาน *</label>
+                        <input type="text" id="section_name" name="section_name" required placeholder="เช่น งานบริการวิศวกรรม">
+                    </div>
+                    <div class="form-group">
+                        <label for="division_id_sec">สังกัด กอง *</label>
+                        <select id="division_id_sec" name="division_id" required>
+                            <option value="">-- เลือกกอง --</option>
+                            {% for div in divisions %}
+                                <option value="{{ div.id }}">{{ div.division_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     SUB-TAB CONTENT 6: POSITIONS
+     ========================================== -->
+<div id="tab-positions" class="sub-tab-content" style="display: none;">
+    <div style="display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start;">
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem;">ตำแหน่งสายงานทั้งหมด</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ชื่อตำแหน่ง</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pos in positions %}
+                        <tr>
+                            <td>{{ pos.id }}</td>
+                            <td><strong>{{ pos.position_name }}</strong></td>
+                            <td>
+                                <form action="{{ url_for('admin.delete_position', id=pos.id) }}" method="POST" onsubmit="return confirm('ลบตำแหน่งนี้?')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">ลบ</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: var(--text-secondary);">ไม่พบข้อมูลตำแหน่งงาน</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.2rem; margin-bottom: 1.25rem;">เพิ่มตำแหน่งสายงาน</h2>
+            <form action="{{ url_for('admin.add_position') }}" method="POST">
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="position_name">ชื่อตำแหน่งสายงาน *</label>
+                        <input type="text" id="position_name" name="position_name" required placeholder="เช่น ช่างซ่อมบำรุง">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     SUB-TAB CONTENT 7: VEHICLE TYPES
+     ========================================== -->
+<div id="tab-vehicle-types" class="sub-tab-content" style="display: none;">
+    <div style="display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start;">
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem;">ประเภทพาหนะที่กำหนด</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ประเภทรถ</th>
+                            <th>อัตราเบิกจ่ายต่อกิโลเมตร</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vt in vehicle_types %}
+                        <tr>
+                            <td>{{ vt.id }}</td>
+                            <td><strong>{{ vt.type_name }}</strong></td>
+                            <td>{{ vt.rate_per_km ~ " บาท" if vt.rate_per_km else 'เบิกตามจ่ายจริง' }}</td>
+                            <td>
+                                <form action="{{ url_for('admin.delete_vehicle_type', id=vt.id) }}" method="POST" onsubmit="return confirm('ลบประเภทรถนี้?')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">ลบ</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-secondary);">ไม่พบข้อมูลประเภทพาหนะ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 2rem;">
+            <h2 style="font-size: 1.2rem; margin-bottom: 1.25rem;">เพิ่มประเภทรถ</h2>
+            <form action="{{ url_for('admin.add_vehicle_type') }}" method="POST">
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="type_name">ชื่อประเภทรถ *</label>
+                        <input type="text" id="type_name" name="type_name" required placeholder="เช่น รถจักรยานยนต์ส่วนตัว">
+                    </div>
+                    <div class="form-group">
+                        <label for="rate_per_km">อัตรากิโลเมตรละ (บาท) - ปล่อยว่างถ้าเป็นเบิกจ่ายตามจริง</label>
+                        <input type="number" id="rate_per_km" name="rate_per_km" step="0.01">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem;">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchSubTab(event, tabId) {
+    event.preventDefault();
+    
+    // Hide all sub-tabs content
+    const contents = document.querySelectorAll('.sub-tab-content');
+    contents.forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Remove active class from all sub-tab links
+    const links = document.querySelectorAll('.sub-tab');
+    links.forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    // Show selected content and activate tab link
+    document.getElementById(tabId).style.display = 'block';
+    event.currentTarget.classList.add('active');
+}
+
+// Support deep linking on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#tab-')) {
+        const tabId = hash.replace('#', '');
+        const targetTabLink = document.querySelector(`a[href="${hash}"]`);
+        if (targetTabLink) {
+            // Trigger fake event
+            const fakeEvent = {
+                preventDefault: function() {},
+                currentTarget: targetTabLink
+            };
+            switchSubTab(fakeEvent, tabId);
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} - Travel & Expense System</title>
+    
+    <!-- Material Symbols Rounded -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=block" rel="stylesheet">
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="nav-container">
+            <a href="/" class="brand">
+                <div>
+                    <div>ระบบเอกสารราชการ</div>
+                    <div class="brand-subtitle">เทคโนโลยีควบคุมผลิต กรค.</div>
+                </div>
+            </a>
+            <nav class="nav-links">
+                <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">หน้าแรก</a>
+                <a href="/travel-approval" class="nav-link {% if request.path.startswith('/travel-approval') %}active{% endif %}">อนุมัติเดินทาง</a>
+                <a href="/travel-expense" class="nav-link {% if request.path.startswith('/travel-expense') %}active{% endif %}">เบิกจ่ายค่าเดินทาง</a>
+                <a href="/medical-expense" class="nav-link {% if request.path.startswith('/medical-expense') %}active{% endif %}">เบิกจ่ายค่ารักษาพยาบาล</a>
+                
+                {% if session.get('admin_logged_in') %}
+                    <a href="/admin" class="nav-link btn-admin active">แผงควบคุม</a>
+                    <a href="/admin/logout" class="nav-link" style="color: var(--danger);">ออกจากระบบ</a>
+                {% else %}
+                    <a href="/admin" class="nav-link btn btn-admin">ผู้ดูแลระบบ</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">
+                            <span>{{ message }}</span>
+                            <span class="material-symbols-rounded" style="cursor: pointer; font-size: 18px;" onclick="this.parentElement.remove()">close</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2026 ระบบเอกสารราชการ แผนกเทคโนโลยีควบคุมผลิต กรค. (ใช้งานภายในบ้านผ่าน Tailscale VPN)</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,605 @@
+{% extends "base.html" %}
+
+{% block title %}เบิกจ่ายค่าเดินทาง{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ===== Page Layout ===== */
+  .expense-form-wrap { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  /* ===== Section Cards ===== */
+  .form-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem 2rem;
+  }
+  .form-section-title {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-size: 1.05rem; font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-section-title .material-symbols-rounded { font-size: 1.4rem; }
+
+  /* ===== Inline grid ===== */
+  .field-row { display: grid; gap: 1rem; margin-bottom: 1rem; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  @media (max-width: 768px) { .cols-2, .cols-3, .cols-4 { grid-template-columns: 1fr; } }
+
+  /* ===== Approval autocomplete ===== */
+  .autocomplete-wrap { position: relative; }
+  .autocomplete-dropdown {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 200;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    display: none;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .autocomplete-dropdown.open { display: block; }
+  .autocomplete-item {
+    padding: 0.65rem 1rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover, .autocomplete-item.active { background: rgba(99,102,241,0.12); }
+  .autocomplete-item .doc-number { font-weight: 700; color: var(--accent); }
+  .autocomplete-item .sub-info { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+  /* ===== Legs table ===== */
+  .legs-table-wrap { overflow-x: auto; margin-top: 0.5rem; }
+  .legs-table {
+    width: 100%; border-collapse: collapse; font-size: 0.88rem;
+    min-width: 1150px;
+  }
+  .col-location {
+    width: 220px;
+    min-width: 200px;
+  }
+  .legs-table th {
+    background: rgba(99,102,241,0.10);
+    color: var(--accent);
+    font-weight: 600;
+    padding: 0.65rem 0.6rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  .legs-table td {
+    padding: 0.5rem 0.4rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .legs-table tr:last-child td { border-bottom: none; }
+  .legs-table input, .legs-table textarea, .legs-table select {
+    width: 100%; padding: 0.45rem 0.55rem; font-size: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-alt, var(--surface));
+    color: var(--text-primary);
+    box-sizing: border-box;
+  }
+  .legs-table textarea { min-height: 58px; resize: vertical; }
+  .legs-table input:focus, .legs-table textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(99,102,241,0.18);
+  }
+
+  /* ===== Row order badge ===== */
+  .leg-order-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 0.75rem; font-weight: 700;
+  }
+
+  /* ===== Remove leg button ===== */
+  .btn-remove-leg {
+    background: none; border: none; cursor: pointer;
+    color: var(--danger, #ef4444);
+    display: flex; align-items: center; justify-content: center;
+    padding: 0.3rem; border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .btn-remove-leg:hover { background: rgba(239,68,68,0.1); }
+
+  /* ===== Add row button ===== */
+  .btn-add-leg {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    margin-top: 0.75rem;
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem; font-weight: 600;
+    background: rgba(99,102,241,0.12); color: var(--accent);
+    border: 1.5px dashed var(--accent);
+    border-radius: 10px; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-add-leg:hover { background: rgba(99,102,241,0.2); transform: scale(1.02); }
+
+  /* ===== Totals preview ===== */
+  .totals-preview {
+    background: rgba(99,102,241,0.07);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    font-size: 0.9rem;
+    display: flex; gap: 2rem; flex-wrap: wrap; align-items: center;
+  }
+  .totals-preview .total-item { display: flex; flex-direction: column; gap: 2px; }
+  .totals-preview .total-label { font-size: 0.78rem; color: var(--text-muted); }
+  .totals-preview .total-val { font-weight: 700; font-size: 1.1rem; color: var(--accent); }
+
+  /* ===== Error message ===== */
+  .field-error { color: var(--danger, #ef4444); font-size: 0.82rem; margin-top: 0.2rem; display: block; }
+  .error-banner {
+    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 10px; padding: 0.75rem 1rem;
+    color: var(--danger, #ef4444); font-size: 0.9rem; font-weight: 600;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="expense-form-wrap">
+
+  <!-- Page Title -->
+  <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.25rem;">
+    <span class="material-symbols-rounded" style="font-size:2.2rem; color:var(--accent);">{% if is_edit %}edit_document{% else %}payments{% endif %}</span>
+    <div>
+      <h1 style="margin:0; font-size:1.45rem;">{% if is_edit %}แก้ไขใบเบิกค่าเดินทาง (เอกสาร #{{ edit_id }}){% else %}แบบฟอร์มขอเบิกจ่ายค่าเดินทางปฏิบัติงาน{% endif %}</h1>
+      <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">{% if is_edit %}แก้ไขข้อมูลและบันทึกอัปเดตไฟล์เอกสาร Excel ใหม่อัตโนมัติ{% else %}กรอกข้อมูลการเดินทางและรายละเอียดเส้นทาง ระบบจะคำนวณเบี้ยเลี้ยงอัตโนมัติ{% endif %}</p>
+    </div>
+  </div>
+
+  {% if errors.general %}
+  <div class="error-banner">
+    <span class="material-symbols-rounded">warning</span>
+    {{ errors.general }}
+  </div>
+  {% endif %}
+
+  <form method="POST" id="expenseForm" novalidate>
+
+    <!-- ========================================
+         SECTION A: Header
+         ======================================== -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="material-symbols-rounded">assignment</span>
+        ข้อมูลการเดินทาง
+      </div>
+
+      <!-- Approval document number reference -->
+      <div class="form-group" style="margin-bottom:1rem;">
+        <label for="approval_doc_number">เลขที่อนุมัติเดินทาง *</label>
+        <input type="text"
+               id="approval_doc_number"
+               name="approval_doc_number"
+               placeholder="เช่น ตท. 12/2569 (ระบุเลขที่อนุมัติเดินทาง)"
+               value="{{ form_data.approval_doc_number or '' }}"
+               required>
+        {% if errors.approval_doc_number %}
+          <span class="field-error">{{ errors.approval_doc_number }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Depart + Return dates/times -->
+      <div class="field-row cols-2">
+        <div>
+          <label>วันที่ / เวลา — ออกเดินทาง *</label>
+          <div class="field-row cols-2" style="margin-bottom:0;">
+            <div class="form-group" style="margin-bottom:0;">
+              <input type="date" name="depart_date" id="depart_date"
+                     value="{{ form_data.depart_date or '' }}" required>
+              {% if errors.depart_date %}
+                <span class="field-error">{{ errors.depart_date }}</span>
+              {% endif %}
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <input type="time" name="depart_time" id="depart_time"
+                     value="{{ form_data.depart_time or '' }}">
+            </div>
+          </div>
+        </div>
+        <div>
+          <label>วันที่ / เวลา — เดินทางกลับ *</label>
+          <div class="field-row cols-2" style="margin-bottom:0;">
+            <div class="form-group" style="margin-bottom:0;">
+              <input type="date" name="return_date" id="return_date"
+                     value="{{ form_data.return_date or '' }}" required>
+              {% if errors.return_date %}
+                <span class="field-error">{{ errors.return_date }}</span>
+              {% endif %}
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <input type="time" name="return_time" id="return_time"
+                     value="{{ form_data.return_time or '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Staff + Vehicle -->
+      <div class="field-row cols-2" style="margin-top:0.75rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="staff_id">ชื่อผู้ขอเบิก *</label>
+          <select id="staff_id" name="staff_id" required>
+            <option value="">-- เลือกชื่อพนักงาน --</option>
+            {% for s in staff_members %}
+              <option value="{{ s.id }}"
+                      data-perdiem="{{ s.per_diem_rate or 240.0 }}"
+                      data-accommodation="{{ s.accommodation_rate or 1200.0 }}"
+                {% if form_data.staff_id|string == s.id|string %}selected{% endif %}>
+                {{ s.full_name }}{% if s.position %} ({{ s.position }}){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          {% if errors.staff_id %}
+            <span class="field-error">{{ errors.staff_id }}</span>
+          {% endif %}
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="vehicle_id">ยานพาหนะ (ทะเบียน) *</label>
+          <select id="vehicle_id" name="vehicle_id" required>
+            <option value="">-- เลือกยานพาหนะ --</option>
+            {% for v in vehicles %}
+              <option value="{{ v.id }}"
+                      data-type="{{ v.type_name }}"
+                      data-rate="{{ v.rate_per_km or 0 }}"
+                {% if form_data.vehicle_id|string == v.id|string %}selected{% endif %}>
+                {{ v.plate_number }} — {{ v.type_name }}{% if v.owner_name %} ({{ v.owner_name }}){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          {% if errors.vehicle_id %}
+            <span class="field-error">{{ errors.vehicle_id }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Rental-only: Fuel + Toll costs -->
+      <div id="rentalCostsRow" class="field-row cols-2" style="margin-top:0.75rem; display:none;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="fuel_cost">ค่าน้ำมัน (บาท)</label>
+          <input type="number" id="fuel_cost" name="fuel_cost"
+                 step="0.01" min="0" placeholder="0.00"
+                 value="{{ form_data.fuel_cost or '' }}">
+          <small style="color:var(--text-muted);">เฉพาะรถเช่า (ไม่บังคับกรอก)</small>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="toll_cost">ค่าผ่านทาง (บาท)</label>
+          <input type="number" id="toll_cost" name="toll_cost"
+                 step="0.01" min="0" placeholder="0.00"
+                 value="{{ form_data.toll_cost or '' }}">
+          <small style="color:var(--text-muted);">เฉพาะรถเช่า (ไม่บังคับกรอก)</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================
+         SECTION B: Legs table
+         ======================================== -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="material-symbols-rounded">route</span>
+        รายละเอียดเส้นทางการเดินทาง
+        {% if errors.legs %}
+          <span class="field-error" style="margin-left:auto;">{{ errors.legs }}</span>
+        {% endif %}
+      </div>
+
+      <div class="legs-table-wrap">
+        <table class="legs-table" id="legsTable">
+          <thead>
+            <tr>
+              <th style="width:36px;">#</th>
+              <th class="col-location">ออกจาก</th>
+              <th style="width:120px;">วันที่ออก</th>
+              <th style="width:90px;">เวลาออก</th>
+              <th class="col-location">ถึง</th>
+              <th style="width:120px;">วันที่ถึง</th>
+              <th style="width:90px;">เวลาถึง</th>
+              <th style="min-width:180px;">รายงานการเดินทาง/ปฏิบัติงาน</th>
+              <th class="col-distance" style="width:90px;">ระยะทาง<br><small>กม.</small></th>
+              <th style="width:80px;">ตัวคูณ<br>เบี้ยเลี้ยง</th>
+              <th style="width:70px; text-align:center;">มีค่าที่พัก<br>คืนนี้</th>
+              <th style="width:42px;"></th>
+            </tr>
+          </thead>
+          <tbody id="legsTbody">
+            {% if existing_legs %}
+              {% for leg in existing_legs %}
+                {% set idx = loop.index0 %}
+                <tr data-leg-idx="{{ idx }}">
+                  <td style="text-align:center; padding-top:0.85rem;">
+                    <span class="leg-order-badge">{{ loop.index }}</span>
+                  </td>
+                  <td><input type="text" name="leg_from_location[]" placeholder="สถานที่ต้นทาง" value="{{ leg.from_location or '' }}"></td>
+                  <td><input type="date" name="leg_depart_date[]" value="{{ leg.depart_date or '' }}"></td>
+                  <td><input type="time" name="leg_depart_time[]" value="{{ leg.depart_time or '' }}"></td>
+                  <td><input type="text" name="leg_to_location[]" placeholder="สถานที่ปลายทาง" value="{{ leg.to_location or '' }}"></td>
+                  <td><input type="date" name="leg_arrive_date[]" value="{{ leg.arrive_date or '' }}"></td>
+                  <td><input type="time" name="leg_arrive_time[]" value="{{ leg.arrive_time or '' }}"></td>
+                  <td><textarea name="leg_work_report[]" placeholder="สรุปงานที่ปฏิบัติ...">{{ leg.work_report or '' }}</textarea></td>
+                  <td class="cell-distance">
+                    <input type="number" name="leg_distance_km[]" step="0.1" min="0" placeholder="กม." value="{{ leg.distance_km if leg.distance_km is not none else '' }}">
+                  </td>
+                  <td>
+                    <input type="number" name="leg_per_diem_multiplier[]" step="0.001" min="0" max="1" value="{{ leg.per_diem_multiplier if leg.per_diem_multiplier is not none else 1 }}" placeholder="1">
+                  </td>
+                  <td style="text-align:center; padding-top:0.6rem;">
+                    <input type="checkbox" name="leg_has_accommodation_check[]" value="{{ idx }}" {% if leg.has_accommodation %}checked{% endif %} style="width:20px; height:20px; cursor:pointer; margin:0 auto;">
+                  </td>
+                  <td>
+                    <button type="button" class="btn-remove-leg" title="ลบรายการนี้">
+                      <span class="material-symbols-rounded" style="font-size:1.2rem;">remove_circle</span>
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <button type="button" class="btn-add-leg" id="btnAddLeg">
+        <span class="material-symbols-rounded" style="font-size:1.1rem;">add_circle</span>
+        เพิ่มรายการเส้นทาง
+      </button>
+    </div>
+
+    <!-- ========================================
+         SECTION C: สรุปยอดเบิกจ่าย (Live Totals Preview)
+         ======================================== -->
+    <div class="form-section" style="background: rgba(99,102,241,0.04); border-color: rgba(99,102,241,0.25); margin-bottom:1.5rem;">
+      <div class="form-section-title" style="color: var(--accent); margin-bottom: 1rem; border-bottom: none; padding-bottom: 0;">
+        <span class="material-symbols-rounded">calculate</span>
+        สรุปประมาณการยอดเบิกจ่าย (ตรวจสอบความถูกต้องก่อนบันทึก)
+      </div>
+      <div class="totals-preview">
+        <div class="total-item">
+          <span class="total-label">รวมค่าเบี้ยเลี้ยง</span>
+          <span class="total-val" id="previewPerDiem">0.00 บาท</span>
+        </div>
+        <div class="total-item">
+          <span class="total-label">รวมค่าที่พัก (<span id="previewNights">0</span> คืน)</span>
+          <span class="total-val" id="previewAccommodation">0.00 บาท</span>
+        </div>
+        <div class="total-item">
+          <span class="total-label">รวมค่าพาหนะ/เดินทาง</span>
+          <span class="total-val" id="previewVehicle">0.00 บาท</span>
+        </div>
+        <div class="total-item" style="margin-left: auto; border-left: 2.5px solid rgba(99,102,241,0.25); padding-left: 2rem; display: flex; flex-direction: column; align-items: flex-end;">
+          <span class="total-label" style="font-weight: 700; color: var(--accent);">ยอดรวมเบิกจ่ายสุทธิ</span>
+          <span class="total-val" id="previewTotal" style="font-size: 1.5rem; color: var(--accent); font-weight: 800;">0.00 บาท</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================
+         SECTION D: Form actions
+         ======================================== -->
+    <div class="form-actions" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+      <a href="{% if is_edit %}/admin/{% else %}/{% endif %}" class="btn btn-secondary">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>ย้อนกลับ</span>
+      </a>
+      <button type="submit" class="btn btn-primary" id="btnSubmit">
+        <span class="material-symbols-rounded">{% if is_edit %}save{% else %}article{% endif %}</span>
+        <span>{% if is_edit %}บันทึกการแก้ไขและอัปเดตเอกสาร{% else %}บันทึกและสร้างเอกสารเบิกจ่าย{% endif %}</span>
+      </button>
+    </div>
+
+  </form>
+</div>
+
+{# ============================================================
+   JAVASCRIPT
+   ============================================================ #}
+<script>
+(function() {
+  'use strict';
+
+  /* ---- State ---- */
+  let legCount = 0;
+  let isPersonalCar = false;
+
+  /* ---- Live Totals Calculation ---- */
+  const staffSelect = document.getElementById('staff_id');
+  const vehicleSelect = document.getElementById('vehicle_id');
+  const fuelInput = document.getElementById('fuel_cost');
+  const tollInput = document.getElementById('toll_cost');
+  const rentalRow = document.getElementById('rentalCostsRow');
+
+  function calculateLiveTotals() {
+    // 1. Staff Rates
+    const selectedStaff = staffSelect.options[staffSelect.selectedIndex];
+    const perDiemRate = selectedStaff && selectedStaff.value ? (parseFloat(selectedStaff.dataset.perdiem) || 240.0) : 0.0;
+    const accommodationRate = selectedStaff && selectedStaff.value ? (parseFloat(selectedStaff.dataset.accommodation) || 1200.0) : 0.0;
+
+    // 2. Per Diem Cost
+    const multipliers = [...document.querySelectorAll('input[name="leg_per_diem_multiplier[]"]')].map(el => parseFloat(el.value) || 0.0);
+    const totalPerDiem = multipliers.reduce((sum, mult) => sum + (perDiemRate * mult), 0.0);
+
+    // 3. Accommodation Cost
+    const accommodationsChecked = [...document.querySelectorAll('input[name="leg_has_accommodation_check[]"]:checked')].length;
+    const totalAccommodation = accommodationsChecked * accommodationRate;
+
+    // 4. Vehicle Cost
+    let vehicleCost = 0.0;
+    const selectedVehicle = vehicleSelect.options[vehicleSelect.selectedIndex];
+    const ratePerKm = selectedVehicle && selectedVehicle.value ? (parseFloat(selectedVehicle.dataset.rate) || 0.0) : 0.0;
+
+    if (isPersonalCar) {
+      const distances = [...document.querySelectorAll('input[name="leg_distance_km[]"]')].map(el => parseFloat(el.value) || 0.0);
+      const totalDistance = distances.reduce((sum, dist) => sum + dist, 0.0);
+      vehicleCost = totalDistance * ratePerKm;
+    } else {
+      const fuelCost = parseFloat(fuelInput.value) || 0.0;
+      const tollCost = parseFloat(tollInput.value) || 0.0;
+      vehicleCost = fuelCost + tollCost;
+    }
+
+    // 5. Grand Total
+    const grandTotal = totalPerDiem + totalAccommodation + vehicleCost;
+
+    // 6. Update DOM
+    document.getElementById('previewPerDiem').textContent = totalPerDiem.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+    document.getElementById('previewNights').textContent = accommodationsChecked;
+    document.getElementById('previewAccommodation').textContent = totalAccommodation.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+    document.getElementById('previewVehicle').textContent = vehicleCost.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+    document.getElementById('previewTotal').textContent = grandTotal.toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+  }
+
+  function updateVehicleUI() {
+    const opt = vehicleSelect.options[vehicleSelect.selectedIndex];
+    const typeName = opt ? (opt.dataset.type || '') : '';
+    isPersonalCar = typeName.includes('ส่วนตัว');
+
+    // Show/hide rental cost fields
+    rentalRow.style.display = isPersonalCar ? 'none' : 'grid';
+
+    // Show/hide distance column in legs
+    document.querySelectorAll('.col-distance').forEach(el => {
+      el.style.display = isPersonalCar ? '' : 'none';
+    });
+    document.querySelectorAll('.cell-distance').forEach(el => {
+      el.style.display = isPersonalCar ? '' : 'none';
+    });
+
+    calculateLiveTotals();
+  }
+
+  vehicleSelect.addEventListener('change', updateVehicleUI);
+  staffSelect.addEventListener('change', calculateLiveTotals);
+  fuelInput.addEventListener('input', calculateLiveTotals);
+  tollInput.addEventListener('input', calculateLiveTotals);
+
+  /* ---- Legs table: Add / Remove rows ---- */
+  function buildLegRow(idx) {
+    const n = idx + 1;
+    const distStyle = isPersonalCar ? '' : 'display:none;';
+    const tr = document.createElement('tr');
+    tr.dataset.legIdx = idx;
+    tr.innerHTML = `
+      <td style="text-align:center; padding-top:0.85rem;">
+        <span class="leg-order-badge">${n}</span>
+      </td>
+      <td><input type="text" name="leg_from_location[]" placeholder="สถานที่ต้นทาง"></td>
+      <td><input type="date" name="leg_depart_date[]"></td>
+      <td><input type="time" name="leg_depart_time[]"></td>
+      <td><input type="text" name="leg_to_location[]" placeholder="สถานที่ปลายทาง"></td>
+      <td><input type="date" name="leg_arrive_date[]"></td>
+      <td><input type="time" name="leg_arrive_time[]"></td>
+      <td><textarea name="leg_work_report[]" placeholder="สรุปงานที่ปฏิบัติ..."></textarea></td>
+      <td class="cell-distance" style="${distStyle}">
+        <input type="number" name="leg_distance_km[]" step="0.1" min="0" placeholder="กม.">
+      </td>
+      <td>
+        <input type="number" name="leg_per_diem_multiplier[]" step="0.001" min="0" max="1" value="1"
+               placeholder="1">
+      </td>
+      <td style="text-align:center; padding-top:0.6rem;">
+        <input type="checkbox" name="leg_has_accommodation_check[]" value="${idx}"
+               style="width:20px; height:20px; cursor:pointer; margin:0 auto;">
+      </td>
+      <td>
+        <button type="button" class="btn-remove-leg" title="ลบรายการนี้">
+          <span class="material-symbols-rounded" style="font-size:1.2rem;">remove_circle</span>
+        </button>
+      </td>`;
+
+    bindRowEvents(tr);
+    return tr;
+  }
+
+  function bindRowEvents(tr) {
+    const removeBtn = tr.querySelector('.btn-remove-leg');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        tr.remove();
+        reindexRows();
+        calculateLiveTotals();
+      });
+    }
+
+    // Add event listeners to recalculate totals dynamically on input changes
+    tr.querySelectorAll('input, textarea, select').forEach(input => {
+      input.addEventListener('input', calculateLiveTotals);
+      input.addEventListener('change', calculateLiveTotals);
+    });
+  }
+
+  function reindexRows() {
+    document.querySelectorAll('#legsTbody tr').forEach((tr, i) => {
+      const badge = tr.querySelector('.leg-order-badge');
+      if (badge) badge.textContent = i + 1;
+      tr.dataset.legIdx = i;
+      const cb = tr.querySelector('input[name="leg_has_accommodation_check[]"]');
+      if (cb) cb.value = i;
+    });
+    legCount = document.querySelectorAll('#legsTbody tr').length;
+  }
+
+  document.getElementById('btnAddLeg').addEventListener('click', () => {
+    const tbody = document.getElementById('legsTbody');
+    tbody.appendChild(buildLegRow(legCount));
+    legCount++;
+    calculateLiveTotals();
+  });
+
+  /* ---- Client-side validation on submit ---- */
+  document.getElementById('expenseForm').addEventListener('submit', function(e) {
+    const rows = document.querySelectorAll('#legsTbody tr');
+    if (!rows.length) {
+      e.preventDefault();
+      alert('กรุณาเพิ่มรายการเส้นทางอย่างน้อย 1 รายการ');
+      return;
+    }
+    if (isPersonalCar) {
+      const dists = [...document.querySelectorAll('input[name="leg_distance_km[]"]')]
+        .map(i => parseFloat(i.value) || 0);
+      if (!dists.some(d => d > 0)) {
+        e.preventDefault();
+        alert('รถยนต์ส่วนตัว: กรุณากรอกระยะทาง (กม.) อย่างน้อย 1 รายการ');
+        return;
+      }
+    }
+    const dep = document.getElementById('depart_date').value;
+    const ret = document.getElementById('return_date').value;
+    if (dep && ret && ret < dep) {
+      e.preventDefault();
+      alert('วันที่เดินทางกลับต้องไม่มาก่อนวันที่ออกเดินทาง');
+    }
+  });
+
+  /* ---- Init: bind existing rows or add first row + apply vehicle state ---- */
+  document.querySelectorAll('#legsTbody tr').forEach(tr => {
+    bindRowEvents(tr);
+  });
+  legCount = document.querySelectorAll('#legsTbody tr').length;
+
+  updateVehicleUI();
+
+  if (legCount === 0) {
+    document.getElementById('btnAddLeg').click();  // auto-add first row
+  } else {
+    calculateLiveTotals();
+  }
+
+})();
+</script>
+{% endblock %}

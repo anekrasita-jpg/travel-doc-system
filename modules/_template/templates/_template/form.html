@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}โมดูลแม่แบบ - ระบบเอกสารราชการ{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+    <div class="form-title">
+        <span class="material-symbols-rounded" style="font-size: 2.25rem; color: var(--primary);">description</span>
+        <span>แบบฟอร์มแม่แบบ (สำหรับคัดลอกสร้างโมดูลใหม่)</span>
+    </div>
+
+    <form method="POST">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="example_field">ตัวอย่างฟิลด์กรอกข้อมูล *</label>
+                <input type="text" id="example_field" name="example_field" value="{{ form_data.example_field or '' }}" placeholder="กรอกข้อมูลทดสอบ">
+                {% if errors.example_field %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.example_field }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="/" class="btn btn-secondary">
+                <span class="material-symbols-rounded">arrow_back</span>
+                <span>ย้อนกลับ</span>
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <span>บันทึกและสร้างเอกสาร</span>
+                <span class="material-symbols-rounded">article</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

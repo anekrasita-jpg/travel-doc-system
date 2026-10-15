@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}เข้าสู่ระบบ ผู้ดูแลระบบ{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
+    <div class="glass-card" style="width: 100%; max-width: 450px;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <span class="material-symbols-rounded" style="font-size: 4rem; color: var(--primary);">admin_panel_settings</span>
+            <h2 style="margin-top: 0.5rem;">สำหรับผู้ดูแลระบบ</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">กรอกรหัสผ่านเพื่อเข้าใช้งานส่วนจัดการ</p>
+        </div>
+
+        <form action="{{ url_for('admin.login') }}" method="POST">
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div class="form-group">
+                    <label for="username">ชื่อผู้ใช้งาน (Username)</label>
+                    <input type="text" id="username" name="username" required placeholder="ระบุชื่อผู้ใช้งาน">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">รหัสผ่าน (Password)</label>
+                    <input type="password" id="password" name="password" required placeholder="ระบุรหัสผ่าน">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    <span>เข้าสู่ระบบ</span>
+                    <span class="material-symbols-rounded">login</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

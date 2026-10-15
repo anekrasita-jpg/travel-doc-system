@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}จัดการข้อมูลพนักงาน - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <div>
+        <h1>จัดการข้อมูลพนักงาน (Staff Management)</h1>
+        <p style="color: var(--text-secondary);">จัดการรายชื่อพนักงานสำหรับนำไปใช้เป็นตัวเลือกในแบบฟอร์มเอกสาร</p>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="admin-tabs">
+    <a href="{{ url_for('admin.dashboard') }}" class="admin-tab">จัดการเอกสารราชการ</a>
+    <a href="{{ url_for('admin.staff_manage') }}" class="admin-tab active">จัดการข้อมูลพนักงาน</a>
+    <a href="{{ url_for('admin.master_manage') }}" class="admin-tab">ตั้งค่าข้อมูลอ้างอิง (Master Data)</a>
+    <a href="{{ url_for('admin.dependents_manage') }}" class="admin-tab">จัดการข้อมูลบุตร</a>
+    <a href="{{ url_for('admin.trash') }}" class="admin-tab" style="color: #f87171;"><span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle; margin-right:4px;">delete</span>รายการที่ลบแล้ว</a>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start;">
+    <!-- Staff List -->
+    <div class="glass-card" style="padding: 2rem;">
+        <h2 style="font-size: 1.4rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span class="material-symbols-rounded" style="color: var(--primary)">groups</span>
+            <span>รายชื่อพนักงานทั้งหมด</span>
+        </h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>รหัสพนักงาน</th>
+                        <th>ชื่อ-นามสกุล</th>
+                        <th>ตำแหน่ง / ระดับเกรด</th>
+                        <th>ฝ่าย/แผนก</th>
+                        <th>เบอร์โทร</th>
+                        <th>สถานะ</th>
+                        <th>การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in staff_list %}
+                    <tr>
+                        <td>
+                            <span style="font-family: monospace; font-weight: 700; font-size: 0.95rem;
+                                         background: var(--surface-alt, rgba(99,102,241,0.1));
+                                         color: var(--accent); padding: 0.2rem 0.5rem;
+                                         border-radius: 6px; letter-spacing: 0.05em;">
+                                {{ member.id }}
+                            </span>
+                        </td>
+                        <td><strong>{{ member.full_name }}</strong></td>
+                        <td>
+                            <div>{{ member.position or '-' }}</div>
+                            {% if member.grade %}
+                                <small style="color: var(--text-muted);">{{ member.grade }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ member.department or '-' }}</td>
+                        <td>{{ member.phone or '-' }}</td>
+                        <td>
+                            {% if member.is_active %}
+                                <span class="badge badge-approved">ใช้งาน</span>
+                            {% else %}
+                                <span class="badge badge-rejected">ระงับการใช้งาน</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-links">
+                                <form action="{{ url_for('admin.toggle_staff_status', staff_id=member.id) }}" method="POST" style="display:inline-block; margin-bottom: 0.25rem;">
+                                    <button type="submit" class="btn btn-secondary" style="padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                                        {% if member.is_active %}ระงับ{% else %}เปิดใช้งาน{% endif %}
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('admin.delete_staff', staff_id=member.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('คุณแน่ใจว่าต้องการลบพนักงานคนนี้ใช่หรือไม่?')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.8rem;">ลบ</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-secondary);">ไม่พบข้อมูลพนักงาน</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Staff Form -->
+    <div class="glass-card" style="padding: 2rem;">
+        <h2 style="font-size: 1.3rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span class="material-symbols-rounded" style="color: var(--accent)">person_add</span>
+            <span>เพิ่มพนักงานใหม่</span>
+        </h2>
+        <form action="{{ url_for('admin.add_staff') }}" method="POST">
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div class="form-group">
+                    <label for="staff_id">รหัสพนักงาน (Employee ID) *</label>
+                    <input type="number" id="staff_id" name="staff_id" min="1" step="1" required
+                           placeholder="เช่น 1234 (รหัสพนักงานตามหน่วยงาน)"
+                           style="font-size: 1.05rem; font-weight: 600; letter-spacing: 0.05em;">
+                    <small style="color: var(--text-muted); margin-top: 0.25rem; display:block;">ต้องเป็นตัวเลขเท่านั้น และต้องไม่ซ้ำกับรหัสที่มีอยู่แล้วในระบบ</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="full_name">ชื่อ-นามสกุล *</label>
+                    <input type="text" id="full_name" name="full_name" required placeholder="นาย/นาง/นางสาว...">
+                </div>
+
+                <div class="form-group">
+                    <label for="position_id">ตำแหน่งงาน (ใช้คำนวณเบี้ยเลี้ยง) *</label>
+                    <select id="position_id" name="position_id" required>
+                        <option value="">-- เลือกตำแหน่งงาน --</option>
+                        {% for pos in positions %}
+                            <option value="{{ pos.id }}">{{ pos.position_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="grade">ระดับเกรด (เช่น ซี 5 - สำหรับอ้างอิงแสดงผล)</label>
+                    <input type="text" id="grade" name="grade" placeholder="เช่น ซี 5">
+                </div>
+
+                <div class="form-group">
+                    <label for="section_id">สังกัดแผนกงาน *</label>
+                    <select id="section_id" name="section_id" required>
+                        <option value="">-- เลือกแผนกงาน --</option>
+                        {% for sec in sections %}
+                            <option value="{{ sec.id }}">{{ sec.section_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">เบอร์โทรศัพท์ติดต่อ</label>
+                    <input type="text" id="phone" name="phone" placeholder="เช่น 081-XXXXXXX">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    <span>บันทึกข้อมูลพนักงาน</span>
+                    <span class="material-symbols-rounded">save</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

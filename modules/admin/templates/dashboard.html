@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+
+{% block title %}แผงควบคุมระบบ - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <div>
+        <h1>แผงควบคุมระบบ (Admin Dashboard)</h1>
+        <p style="color: var(--text-secondary);">จัดการสถานะเอกสาร และข้อมูลพนักงานในระบบ</p>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="admin-tabs">
+    <a href="{{ url_for('admin.dashboard') }}" class="admin-tab active">จัดการเอกสารราชการ</a>
+    <a href="{{ url_for('admin.staff_manage') }}" class="admin-tab">จัดการข้อมูลพนักงาน</a>
+    <a href="{{ url_for('admin.master_manage') }}" class="admin-tab">ตั้งค่าข้อมูลอ้างอิง (Master Data)</a>
+    <a href="{{ url_for('admin.dependents_manage') }}" class="admin-tab">จัดการข้อมูลบุตร</a>
+    <a href="{{ url_for('admin.trash') }}" class="admin-tab" style="color: #f87171;"><span class="material-symbols-rounded" style="font-size:16px; vertical-align:middle; margin-right:4px;">delete</span>รายการที่ลบแล้ว</a>
+</div>
+
+<!-- Stats Row -->
+<div class="module-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 2rem;">
+    <div class="glass-card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+        <span class="material-symbols-rounded" style="font-size: 3rem; color: var(--primary);">flight_takeoff</span>
+        <div>
+            <h3 style="font-size: 1.5rem; font-weight: 700;">{{ app_total }}</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;">ขออนุมัติเดินทาง</p>
+        </div>
+    </div>
+    <div class="glass-card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+        <span class="material-symbols-rounded" style="font-size: 3rem; color: var(--accent);">payments</span>
+        <div>
+            <h3 style="font-size: 1.5rem; font-weight: 700;">{{ exp_total }}</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;">เบิกจ่ายค่าเดินทาง</p>
+        </div>
+    </div>
+    <div class="glass-card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+        <span class="material-symbols-rounded" style="font-size: 3rem; color: #a855f7;">medical_services</span>
+        <div>
+            <h3 style="font-size: 1.5rem; font-weight: 700;">{{ med_total }}</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;">เบิกค่ารักษาพยาบาล</p>
+        </div>
+    </div>
+</div>
+
+{# ─────────────────────────────────────────────────────────────────────────── #}
+{# MACRO: reusable pagination bar                                              #}
+{# ─────────────────────────────────────────────────────────────────────────── #}
+{% macro pagination_bar(prefix, current_page, total_pages, extra_args) %}
+{% if total_pages > 1 %}
+<div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-top:1.25rem; flex-wrap:wrap;">
+
+    {# Previous #}
+    {% if current_page > 1 %}
+        <a href="{{ url_for('admin.dashboard', **dict(extra_args, **{prefix+'_page': current_page-1})) }}"
+           class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+           <span class="material-symbols-rounded" style="font-size:16px;vertical-align:middle;">chevron_left</span>
+        </a>
+    {% else %}
+        <span class="btn btn-secondary" style="padding:0.35rem 0.75rem;font-size:0.85rem;opacity:.35;cursor:default;">
+            <span class="material-symbols-rounded" style="font-size:16px;vertical-align:middle;">chevron_left</span>
+        </span>
+    {% endif %}
+
+    {# Page numbers (show ±2 window) #}
+    {% set win_start = [1, current_page - 2] | max %}
+    {% set win_end   = [total_pages, current_page + 2] | min %}
+    {% if win_start > 1 %}
+        <a href="{{ url_for('admin.dashboard', **dict(extra_args, **{prefix+'_page': 1})) }}"
+           class="btn btn-secondary" style="padding:0.35rem 0.7rem;font-size:0.85rem;">1</a>
+        {% if win_start > 2 %}<span style="color:var(--text-secondary);">…</span>{% endif %}
+    {% endif %}
+    {% for p in range(win_start, win_end + 1) %}
+        {% if p == current_page %}
+            <span class="btn btn-primary" style="padding:0.35rem 0.7rem;font-size:0.85rem;cursor:default;">{{ p }}</span>
+        {% else %}
+            <a href="{{ url_for('admin.dashboard', **dict(extra_args, **{prefix+'_page': p})) }}"
+               class="btn btn-secondary" style="padding:0.35rem 0.7rem;font-size:0.85rem;">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+    {% if win_end < total_pages %}
+        {% if win_end < total_pages - 1 %}<span style="color:var(--text-secondary);">…</span>{% endif %}
+        <a href="{{ url_for('admin.dashboard', **dict(extra_args, **{prefix+'_page': total_pages})) }}"
+           class="btn btn-secondary" style="padding:0.35rem 0.7rem;font-size:0.85rem;">{{ total_pages }}</a>
+    {% endif %}
+
+    {# Next #}
+    {% if current_page < total_pages %}
+        <a href="{{ url_for('admin.dashboard', **dict(extra_args, **{prefix+'_page': current_page+1})) }}"
+           class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+           <span class="material-symbols-rounded" style="font-size:16px;vertical-align:middle;">chevron_right</span>
+        </a>
+    {% else %}
+        <span class="btn btn-secondary" style="padding:0.35rem 0.75rem;font-size:0.85rem;opacity:.35;cursor:default;">
+            <span class="material-symbols-rounded" style="font-size:16px;vertical-align:middle;">chevron_right</span>
+        </span>
+    {% endif %}
+</div>
+{% endif %}
+{% endmacro %}
+
+
+{# ─────────────────────────────────────────────────────────────────────────── #}
+{# SECTION 1 — Travel Approvals                                                #}
+{# ─────────────────────────────────────────────────────────────────────────── #}
+<div class="glass-card" style="margin-bottom: 2.5rem; padding: 2rem;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem;">
+        <h2 style="font-size: 1.4rem; display: flex; align-items: center; gap: 0.5rem; margin:0;">
+            <span class="material-symbols-rounded" style="color: var(--primary)">flight_takeoff</span>
+            <span>รายการขออนุมัติเดินทาง</span>
+            <span style="font-size:0.85rem; font-weight:400; color:var(--text-secondary);">({{ app_total }} รายการ)</span>
+        </h2>
+        <button onclick="toggleFilter('filter-approval')" class="btn btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.85rem; display:inline-flex; align-items:center; gap:0.4rem;">
+            <span class="material-symbols-rounded" style="font-size:16px;">filter_list</span> ค้นหา / กรอง
+        </button>
+    </div>
+
+    <!-- Filter panel -->
+    <div id="filter-approval" class="filter-panel" style="display:none; margin-bottom:1.25rem;">
+        <form method="GET" action="{{ url_for('admin.dashboard') }}" style="display:grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap:0.75rem; align-items:end;">
+            <!-- Carry other sections' filters -->
+            <input type="hidden" name="exp_search" value="{{ exp_search }}">
+            <input type="hidden" name="exp_date_from" value="{{ exp_date_from }}">
+            <input type="hidden" name="exp_date_to" value="{{ exp_date_to }}">
+            <input type="hidden" name="med_search" value="{{ med_search }}">
+            <input type="hidden" name="med_date_from" value="{{ med_date_from }}">
+            <input type="hidden" name="med_date_to" value="{{ med_date_to }}">
+
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">ค้นหา (ชื่อ / เลขที่ / วัตถุประสงค์)</label>
+                <input type="text" name="app_search" value="{{ app_search }}" placeholder="พิมพ์คำค้นหา..." style="height:38px;">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">วันเดินทางตั้งแต่</label>
+                <input type="date" name="app_date_from" value="{{ app_date_from }}" style="height:38px;">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">ถึงวันที่</label>
+                <input type="date" name="app_date_to" value="{{ app_date_to }}" style="height:38px;">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">สถานะ</label>
+                <select name="app_status" style="height:38px; padding:0 0.75rem;">
+                    <option value="" {% if not app_status %}selected{% endif %}>ทั้งหมด</option>
+                    <option value="pending" {% if app_status=='pending' %}selected{% endif %}>pending</option>
+                    <option value="approved" {% if app_status=='approved' %}selected{% endif %}>approved</option>
+                    <option value="rejected" {% if app_status=='rejected' %}selected{% endif %}>rejected</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:0.5rem; padding-bottom:1px;">
+                <button type="submit" class="btn btn-primary" style="height:38px; padding:0 1rem; font-size:0.85rem;">ค้นหา</button>
+                <a href="{{ url_for('admin.dashboard', exp_search=exp_search, exp_date_from=exp_date_from, exp_date_to=exp_date_to, med_search=med_search, med_date_from=med_date_from, med_date_to=med_date_to) }}"
+                   class="btn btn-secondary" style="height:38px; padding:0 0.75rem; font-size:0.85rem;">รีเซ็ต</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ลำดับ</th>
+                    <th>ผู้ยื่นคำร้อง</th>
+                    <th>เลขที่หนังสือ</th>
+                    <th>วันที่เดินทาง</th>
+                    <th>วัตถุประสงค์</th>
+                    <th>สถานะ</th>
+                    <th>เอกสาร</th>
+                    <th>การจัดการสถานะ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in approvals %}
+                <tr>
+                    <td>{{ app.id }}</td>
+                    <td><strong>{{ app.staff_name }}</strong></td>
+                    <td>{{ app.document_number or '-' }}</td>
+                    <td>{{ app.travel_date_thai }}</td>
+                    <td>{{ app.purpose }}</td>
+                    <td>
+                        <span class="badge badge-{{ app.status }}">{{ app.status }}</span>
+                    </td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: stretch;">
+                            {% if app.docx_path %}
+                                <a href="{{ url_for('admin.download_file', file_type='travel_approval', filename=app.docx_path|basename) }}" class="btn btn-secondary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                                    <span class="material-symbols-rounded" style="font-size: 14px;">description</span> DOCX
+                                </a>
+                            {% endif %}
+                            {% if app.pdf_path %}
+                                <a href="{{ url_for('admin.view_pdf', file_type='travel_approval', filename=app.pdf_path|basename) }}" target="_blank" class="btn btn-secondary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; border-color: rgba(59, 130, 246, 0.4); background: rgba(59, 130, 246, 0.05); color: #60a5fa;">
+                                    <span class="material-symbols-rounded" style="font-size: 14px; color: #3b82f6;">picture_as_pdf</span> PDF
+                                </a>
+                            {% endif %}
+                            {% if not app.docx_path and not app.pdf_path %}
+                                -
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-links" style="display: flex; gap: 0.25rem; align-items: center;">
+                            <a href="{{ url_for('travel_approval.edit', approval_id=app.id) }}" class="btn btn-secondary" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.2rem;" title="แก้ไขเอกสาร">
+                                <span class="material-symbols-rounded" style="font-size:14px;">edit</span> แก้ไข
+                            </a>
+                            <form action="{{ url_for('admin.update_status', approval_id=app.id) }}" method="POST" style="display:inline-block;">
+                                <input type="hidden" name="status" value="approved">
+                                <button type="submit" class="btn btn-primary" style="padding: 0.35rem 0.6rem; font-size: 0.8rem;">อนุมัติ</button>
+                            </form>
+                            <form action="{{ url_for('admin.update_status', approval_id=app.id) }}" method="POST" style="display:inline-block;">
+                                <input type="hidden" name="status" value="rejected">
+                                <button type="submit" class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.8rem;">ปฏิเสธ</button>
+                            </form>
+                            <form action="{{ url_for('admin.soft_delete', doc_type='travel_approval', doc_id=app.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('คุณแน่ใจว่าต้องการย้ายเอกสารนี้ไปที่ถังขยะใช่หรือไม่?')">
+                                <button type="submit" class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #f87171;" title="ลบเอกสาร">
+                                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">delete</span>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-secondary);">
+                        {% if app_search or app_date_from or app_date_to or app_status %}
+                            ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา
+                        {% else %}
+                            ไม่พบข้อมูลคำร้องขออนุมัติเดินทาง
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ pagination_bar('app', app_page, app_total_pages, {
+        'app_search': app_search, 'app_date_from': app_date_from,
+        'app_date_to': app_date_to, 'app_status': app_status,
+        'exp_search': exp_search, 'exp_date_from': exp_date_from, 'exp_date_to': exp_date_to,
+        'med_search': med_search, 'med_date_from': med_date_from, 'med_date_to': med_date_to
+    }) }}
+</div>
+
+
+{# ─────────────────────────────────────────────────────────────────────────── #}
+{# SECTION 2 — Travel Expenses                                                 #}
+{# ─────────────────────────────────────────────────────────────────────────── #}
+<div class="glass-card" style="margin-bottom: 2.5rem; padding: 2rem;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem;">
+        <h2 style="font-size: 1.4rem; display: flex; align-items: center; gap: 0.5rem; margin:0;">
+            <span class="material-symbols-rounded" style="color: var(--accent)">payments</span>
+            <span>รายการเบิกจ่ายค่าเดินทาง</span>
+            <span style="font-size:0.85rem; font-weight:400; color:var(--text-secondary);">({{ exp_total }} รายการ)</span>
+        </h2>
+        <button onclick="toggleFilter('filter-expense')" class="btn btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.85rem; display:inline-flex; align-items:center; gap:0.4rem;">
+            <span class="material-symbols-rounded" style="font-size:16px;">filter_list</span> ค้นหา / กรอง
+        </button>
+    </div>
+
+    <!-- Filter panel -->
+    <div id="filter-expense" class="filter-panel" style="display:none; margin-bottom:1.25rem;">
+        <form method="GET" action="{{ url_for('admin.dashboard') }}" style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:0.75rem; align-items:end;">
+            <!-- Carry other sections' filters -->
+            <input type="hidden" name="app_search" value="{{ app_search }}">
+            <input type="hidden" name="app_date_from" value="{{ app_date_from }}">
+            <input type="hidden" name="app_date_to" value="{{ app_date_to }}">
+            <input type="hidden" name="app_status" value="{{ app_status }}">
+            <input type="hidden" name="med_search" value="{{ med_search }}">
+            <input type="hidden" name="med_date_from" value="{{ med_date_from }}">
+            <input type="hidden" name="med_date_to" value="{{ med_date_to }}">
+
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">ค้นหา (ชื่อ / เลขที่อนุมัติ)</label>
+                <input type="text" name="exp_search" value="{{ exp_search }}" placeholder="พิมพ์คำค้นหา..." style="height:38px;">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">วันออกเดินทางตั้งแต่</label>
+                <input type="date" name="exp_date_from" value="{{ exp_date_from }}" style="height:38px;">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">ถึงวันที่</label>
+                <input type="date" name="exp_date_to" value="{{ exp_date_to }}" style="height:38px;">
+            </div>
+            <div style="display:flex; gap:0.5rem; padding-bottom:1px;">
+                <button type="submit" class="btn btn-primary" style="height:38px; padding:0 1rem; font-size:0.85rem;">ค้นหา</button>
+                <a href="{{ url_for('admin.dashboard', app_search=app_search, app_date_from=app_date_from, app_date_to=app_date_to, app_status=app_status, med_search=med_search, med_date_from=med_date_from, med_date_to=med_date_to) }}"
+                   class="btn btn-secondary" style="height:38px; padding:0 0.75rem; font-size:0.85rem;">รีเซ็ต</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ลำดับ</th>
+                    <th>ผู้ยื่นคำร้อง</th>
+                    <th>เชื่อมโยงอนุมัติเดินทาง</th>
+                    <th>จำนวนเงิน (บาท)</th>
+                    <th>วันที่เบิกเงิน</th>
+                    <th>เอกสาร</th>
+                    <th>การจัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exp in expenses %}
+                <tr>
+                    <td>{{ exp.id }}</td>
+                    <td><strong>{{ exp.staff_name }}</strong></td>
+                    <td>{{ exp.approval_document_number or '-' }}</td>
+                    <td style="color: var(--accent); font-weight: 600;">{{ "{:,.2f}".format(exp.amount) }}</td>
+                    <td>{{ exp.expense_date_thai }}</td>
+                    <td>
+                        {% if exp.docx_path %}
+                            <a href="{{ url_for('admin.download_file', file_type='travel_expense', filename=exp.docx_path|basename) }}" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.25rem; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05); color: #34d399;">
+                                <span class="material-symbols-rounded" style="font-size: 16px; color: #10b981;">table_chart</span> Excel
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-links" style="display: flex; gap: 0.25rem; align-items: center;">
+                            <a href="{{ url_for('travel_expense.edit', expense_id=exp.id) }}" class="btn btn-secondary" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.2rem;" title="แก้ไขเอกสาร">
+                                <span class="material-symbols-rounded" style="font-size:14px;">edit</span> แก้ไข
+                            </a>
+                            <form action="{{ url_for('admin.soft_delete', doc_type='travel_expense', doc_id=exp.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('คุณแน่ใจว่าต้องการย้ายเอกสารนี้ไปที่ถังขยะใช่หรือไม่?')">
+                                <button type="submit" class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #f87171;">
+                                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle; margin-right: 4px;">delete</span> ลบ
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-secondary);">
+                        {% if exp_search or exp_date_from or exp_date_to %}
+                            ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา
+                        {% else %}
+                            ไม่พบข้อมูลคำร้องเบิกเงินค่าเดินทาง
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ pagination_bar('exp', exp_page, exp_total_pages, {
+        'exp_search': exp_search, 'exp_date_from': exp_date_from, 'exp_date_to': exp_date_to,
+        'app_search': app_search, 'app_date_from': app_date_from,
+        'app_date_to': app_date_to, 'app_status': app_status,
+        'med_search': med_search, 'med_date_from': med_date_from, 'med_date_to': med_date_to
+    }) }}
+</div>
+
+
+{# ─────────────────────────────────────────────────────────────────────────── #}
+{# SECTION 3 — Medical Expenses                                                #}
+{# ─────────────────────────────────────────────────────────────────────────── #}
+<div class="glass-card" style="padding: 2rem;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem;">
+        <h2 style="font-size: 1.4rem; display: flex; align-items: center; gap: 0.5rem; margin:0;">
+            <span class="material-symbols-rounded" style="color: #a855f7;">medical_services</span>
+            <span>รายการเบิกจ่ายค่ารักษาพยาบาล</span>
+            <span style="font-size:0.85rem; font-weight:400; color:var(--text-secondary);">({{ med_total }} รายการ)</span>
+        </h2>
+        <button onclick="toggleFilter('filter-medical')" class="btn btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.85rem; display:inline-flex; align-items:center; gap:0.4rem;">
+            <span class="material-symbols-rounded" style="font-size:16px;">filter_list</span> ค้นหา / กรอง
+        </button>
+    </div>
+
+    <!-- Filter panel -->
+    <div id="filter-medical" class="filter-panel" style="display:none; margin-bottom:1.25rem;">
+        <form method="GET" action="{{ url_for('admin.dashboard') }}" style="display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:0.75rem; align-items:end;">
+            <!-- Carry other sections' filters -->
+            <input type="hidden" name="app_search" value="{{ app_search }}">
+            <input type="hidden" name="app_date_from" value="{{ app_date_from }}">
+            <input type="hidden" name="app_date_to" value="{{ app_date_to }}">
+            <input type="hidden" name="app_status" value="{{ app_status }}">
+            <input type="hidden" name="exp_search" value="{{ exp_search }}">
+            <input type="hidden" name="exp_date_from" value="{{ exp_date_from }}">
+            <input type="hidden" name="exp_date_to" value="{{ exp_date_to }}">
+
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">ค้นหา (ชื่อ / สถานพยาบาล / บุตร)</label>
+                <input type="text" name="med_search" value="{{ med_search }}" placeholder="พิมพ์คำค้นหา..." style="height:38px;">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">วันรักษาตั้งแต่</label>
+                <input type="date" name="med_date_from" value="{{ med_date_from }}" style="height:38px;">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label style="font-size:0.8rem; margin-bottom:0.3rem; display:block;">ถึงวันที่</label>
+                <input type="date" name="med_date_to" value="{{ med_date_to }}" style="height:38px;">
+            </div>
+            <div style="display:flex; gap:0.5rem; padding-bottom:1px;">
+                <button type="submit" class="btn btn-primary" style="height:38px; padding:0 1rem; font-size:0.85rem;">ค้นหา</button>
+                <a href="{{ url_for('admin.dashboard', app_search=app_search, app_date_from=app_date_from, app_date_to=app_date_to, app_status=app_status, exp_search=exp_search, exp_date_from=exp_date_from, exp_date_to=exp_date_to) }}"
+                   class="btn btn-secondary" style="height:38px; padding:0 0.75rem; font-size:0.85rem;">รีเซ็ต</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ลำดับ</th>
+                    <th>ผู้ยื่นคำร้อง</th>
+                    <th>เบิกช่วยเหลือสิทธิ์</th>
+                    <th>สถานพยาบาล</th>
+                    <th>วันที่รับการรักษา</th>
+                    <th>จำนวนเงินขอเบิก</th>
+                    <th>ใบเสร็จ</th>
+                    <th>จำนวนเงินจ่ายจริง</th>
+                    <th>เอกสาร</th>
+                    <th>การจัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for med in medicals %}
+                <tr>
+                    <td>{{ med.id }}</td>
+                    <td><strong>{{ med.staff_name }}</strong></td>
+                    <td>
+                        {% if med.beneficiary_type == 'self' %}
+                            <span class="badge badge-approved" style="background:rgba(16,185,129,0.06); border-color:rgba(16,185,129,0.3); color:#10b981;">ตนเอง</span>
+                        {% else %}
+                            <span class="badge badge-pending" style="background:rgba(168,85,247,0.06); border-color:rgba(168,85,247,0.3); color:#a855f7;">บุตร ({{ med.dependent_name or '-' }})</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ med.hospital_name }}</td>
+                    <td>{{ med.treatment_date_thai }}</td>
+                    <td style="color: var(--text-secondary);">{{ "{:,.2f}".format(med.amount_requested) }} บาท</td>
+                    <td>{{ med.receipt_count }} ใบ</td>
+                    <td style="color: #a855f7; font-weight: 700;">{{ "{:,.2f}".format(med.amount_approved) }} บาท</td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; align-items: stretch;">
+                            {% if med.docx_path %}
+                                <a href="{{ url_for('admin.download_file', file_type='medical_expense', filename=med.docx_path|basename) }}" class="btn btn-secondary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                                    <span class="material-symbols-rounded" style="font-size: 14px;">description</span> DOCX
+                                </a>
+                            {% endif %}
+                            {% if med.pdf_path %}
+                                <a href="{{ url_for('medical_expense.view_pdf', filename=med.pdf_path|basename) }}" target="_blank" class="btn btn-secondary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; border-color: rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.05); color: #c084fc;">
+                                    <span class="material-symbols-rounded" style="font-size: 14px; color: #a855f7;">picture_as_pdf</span> PDF
+                                </a>
+                            {% endif %}
+                            {% if not med.docx_path and not med.pdf_path %}
+                                -
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-links" style="display: flex; gap: 0.25rem; align-items: center;">
+                            <a href="{{ url_for('medical_expense.edit', expense_id=med.id) }}" class="btn btn-secondary" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.2rem;" title="แก้ไขเอกสาร">
+                                <span class="material-symbols-rounded" style="font-size:14px;">edit</span> แก้ไข
+                            </a>
+                            <form action="{{ url_for('admin.soft_delete', doc_type='medical_expense', doc_id=med.id) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('คุณแน่ใจว่าต้องการย้ายเอกสารนี้ไปที่ถังขยะใช่หรือไม่?')">
+                                <button type="submit" class="btn btn-danger" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #f87171;">
+                                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle; margin-right: 4px;">delete</span> ลบ
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" style="text-align: center; color: var(--text-secondary);">
+                        {% if med_search or med_date_from or med_date_to %}
+                            ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา
+                        {% else %}
+                            ไม่พบข้อมูลคำร้องเบิกจ่ายค่ารักษาพยาบาล
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ pagination_bar('med', med_page, med_total_pages, {
+        'med_search': med_search, 'med_date_from': med_date_from, 'med_date_to': med_date_to,
+        'app_search': app_search, 'app_date_from': app_date_from,
+        'app_date_to': app_date_to, 'app_status': app_status,
+        'exp_search': exp_search, 'exp_date_from': exp_date_from, 'exp_date_to': exp_date_to
+    }) }}
+</div>
+
+<script>
+function toggleFilter(id) {
+    const el = document.getElementById(id);
+    const isHidden = el.style.display === 'none';
+    // auto-open if there's an active filter
+    el.style.display = isHidden ? 'block' : 'none';
+}
+
+// Auto-open filter panels that already have active values
+document.addEventListener('DOMContentLoaded', () => {
+    const appFilters = ['{{ app_search }}', '{{ app_date_from }}', '{{ app_date_to }}', '{{ app_status }}'].some(v => v !== '');
+    const expFilters = ['{{ exp_search }}', '{{ exp_date_from }}', '{{ exp_date_to }}'].some(v => v !== '');
+    const medFilters = ['{{ med_search }}', '{{ med_date_from }}', '{{ med_date_to }}'].some(v => v !== '');
+    if (appFilters) document.getElementById('filter-approval').style.display = 'block';
+    if (expFilters) document.getElementById('filter-expense').style.display = 'block';
+    if (medFilters) document.getElementById('filter-medical').style.display = 'block';
+});
+</script>
+
+<style>
+.filter-panel {
+    background: var(--surface-alt, rgba(0,0,0,0.2));
+    border: 1px solid var(--border, rgba(255,255,255,0.08));
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    animation: slideDown 0.2s ease;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}

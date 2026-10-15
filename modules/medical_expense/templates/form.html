@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}เบิกค่ารักษาพยาบาล - ระบบเอกสารราชการ{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+    <div class="form-title">
+        <span class="material-symbols-rounded" style="font-size: 2.25rem; color: #a855f7;">medical_services</span>
+        <span>แบบฟอร์มขอเบิกเงินค่ารักษาพยาบาล</span>
+    </div>
+
+    <form method="POST">
+        <div class="form-grid">
+            <!-- Staff Name Dropdown -->
+            <div class="form-group">
+                <label for="staff_id">ผู้ขออนุมัติเบิกจ่าย *</label>
+                <select id="staff_id" name="staff_id" required>
+                    <option value="">-- เลือกรายชื่อพนักงาน --</option>
+                    {% for member in staff_members %}
+                        <option value="{{ member.id }}" {% if form_data.staff_id|string == member.id|string %}selected{% endif %}>
+                            {{ member.full_name }} ({{ member.position }}) - {{ member.department }}
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if errors.staff_id %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.staff_id }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Hospital Name -->
+            <div class="form-group">
+                <label for="hospital_name">ชื่อสถานพยาบาล *</label>
+                <input type="text" id="hospital_name" name="hospital_name" value="{{ form_data.hospital_name or '' }}" required placeholder="ระบุชื่อโรงพยาบาลหรือคลินิก">
+                {% if errors.hospital_name %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.hospital_name }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Amount -->
+            <div class="form-group">
+                <label for="amount">จำนวนเงินที่ขอเบิกจ่าย (บาท) *</label>
+                <input type="number" id="amount" name="amount" step="0.01" min="0.01" value="{{ form_data.amount or '' }}" required placeholder="กรอกจำนวนเงินเบิกจ่าย เช่น 1200.00">
+                {% if errors.amount %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.amount }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Treatment Date -->
+            <div class="form-group">
+                <label for="treatment_date">วันที่เข้ารับการรักษา *</label>
+                <input type="date" id="treatment_date" name="treatment_date" value="{{ form_data.treatment_date or '' }}" required>
+                {% if errors.treatment_date %}
+                    <span style="color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem;">{{ errors.treatment_date }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="/" class="btn btn-secondary">
+                <span class="material-symbols-rounded">arrow_back</span>
+                <span>ย้อนกลับ</span>
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <span>บันทึกและออกเอกสารเบิกค่ารักษา</span>
+                <span class="material-symbols-rounded">article</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

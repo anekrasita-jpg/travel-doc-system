@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block title %}ยื่นขออนุมัติเดินทางไปราชการ - ระบบเอกสารราชการ{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ===== Page Layout ===== */
+  .approval-form-wrap { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  /* ===== Section Cards ===== */
+  .form-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .form-section:hover {
+    box-shadow: 0 6px 24px rgba(99, 102, 241, 0.05);
+  }
+  .form-section-title {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-size: 1.05rem; font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-section-title .material-symbols-rounded { font-size: 1.4rem; }
+
+  /* ===== Inline grid ===== */
+  .field-row { display: grid; gap: 1rem; margin-bottom: 1rem; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 768px) { .cols-2, .cols-3 { grid-template-columns: 1fr; } }
+
+  /* ===== Form Inputs ===== */
+  .form-group label {
+    display: block; font-weight: 600; font-size: 0.85rem;
+    color: var(--text-primary); margin-bottom: 0.4rem;
+  }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 0.6rem 0.8rem; font-size: 0.9rem;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface-alt, var(--surface));
+    color: var(--text-primary); box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  /* ===== Companions Dynamism ===== */
+  .companion-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
+  .companion-row {
+    display: flex; gap: 0.75rem; align-items: center;
+    background: rgba(99, 102, 241, 0.03);
+    border: 1px dashed rgba(99, 102, 241, 0.2);
+    border-radius: 12px; padding: 0.75rem 1rem;
+    animation: fadeIn 0.25s ease-out;
+  }
+  .btn-remove-companion {
+    background: transparent; border: none; color: var(--danger);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    padding: 0.4rem; border-radius: 8px; transition: background 0.15s;
+  }
+  .btn-remove-companion:hover { background: rgba(239, 68, 68, 0.1); }
+  
+  .btn-add-companion {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: transparent; border: 1.5px dashed var(--accent);
+    color: var(--accent); font-weight: 600; font-size: 0.85rem;
+    padding: 0.55rem 1.2rem; border-radius: 10px; cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .btn-add-companion:hover {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: var(--accent-hover, var(--accent));
+  }
+
+  /* ===== Real-time Calculator Card ===== */
+  .days-display-card {
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px; padding: 0.75rem 1.25rem;
+    display: flex; align-items: center; gap: 0.75rem;
+    font-size: 0.9rem; color: #047857; font-weight: 600;
+  }
+  .days-display-card .badge {
+    background: #10b981; color: white; padding: 0.2rem 0.6rem;
+    border-radius: 8px; font-weight: 700; font-size: 1rem;
+  }
+
+  /* ===== Page Header ===== */
+  .page-header {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .page-header-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent); display: flex; align-items: center; justify-content: center;
+  }
+  .page-header-title h1 { font-size: 1.4rem; font-weight: 800; margin: 0; }
+  .page-header-title p { font-size: 0.82rem; color: var(--text-muted); margin: 2px 0 0 0; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="approval-form-wrap">
+  
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-header-icon">
+      <span class="material-symbols-rounded" style="font-size:1.8rem;">{% if is_edit %}edit_document{% else %}flight_takeoff{% endif %}</span>
+    </div>
+    <div class="page-header-title">
+      <h1>{% if is_edit %}แก้ไขใบขออนุมัติเดินทาง (เอกสาร #{{ edit_id }}){% else %}ขออนุมัติเดินทางไปราชการ{% endif %}</h1>
+      <p>{% if is_edit %}แก้ไขข้อมูลและบันทึกอัปเดตไฟล์เอกสารใหม่อัตโนมัติ{% else %}ยื่นเอกสารขอเดินทางและแต่งตั้งผู้รักษาการแทนสำหรับพนักงาน{% endif %}</p>
+    </div>
+  </div>
+
+  <form method="POST" id="approvalForm">
+    
+    <!-- SECTION A: บุคลากรผู้เดินทาง -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="material-symbols-rounded">group</span>
+        <span>บุคลากรผู้ปฏิบัติงานเดินทาง</span>
+      </div>
+
+      <!-- Applicant -->
+      <div class="form-group" style="margin-bottom:1.25rem;">
+        <label for="staff_id">ชื่อผู้ขออนุมัติเดินทาง *</label>
+        <select id="staff_id" name="staff_id" required>
+          <option value="">-- เลือกรายชื่อพนักงาน --</option>
+          {% for member in staff_members %}
+            <option value="{{ member.id }}" {% if form_data.staff_id|string == member.id|string %}selected{% endif %}>
+              {{ member.full_name }} ({% if member.position %}{{ member.position }}{% else %}-{% endif %}) - {{ member.department or 'ฝ่ายงาน' }}
+            </option>
+          {% endfor %}
+        </select>
+        {% if errors.staff_id %}
+          <span class="field-error">{{ errors.staff_id }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Companions list -->
+      <div class="form-group" style="margin-bottom:0.5rem;">
+        <label>ผู้เดินทางร่วมปฏิบัติงาน (ผู้ร่วมเดินทางด้วย)</label>
+        <div class="companion-list" id="companionsList">
+          <!-- Dyn rows injected by JS or server-side error recovery -->
+          {% for current_cid in companion_staff_ids %}
+            <div class="companion-row">
+              <select name="companion_staff_id[]" required style="flex:1;">
+                <option value="">-- เลือกผู้เดินทางร่วม --</option>
+                {% for member in staff_members %}
+                  <option value="{{ member.id }}" {% if current_cid|string == member.id|string %}selected{% endif %}>
+                    {{ member.full_name }} ({% if member.position %}{{ member.position }}{% else %}-{% endif %})
+                  </option>
+                {% endfor %}
+              </select>
+              <button type="button" class="btn-remove-companion" title="ลบรายชื่อนี้">
+                <span class="material-symbols-rounded">delete</span>
+              </button>
+            </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn-add-companion" id="btnAddCompanion">
+          <span class="material-symbols-rounded" style="font-size:1.1rem;">add_circle</span>
+          <span>เพิ่มรายชื่อผู้เดินทางร่วม</span>
+        </button>
+        {% if errors.companion_staff_id %}
+          <span class="field-error" style="display:block; margin-top:0.5rem;">{{ errors.companion_staff_id }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- SECTION B: รายละเอียดการอนุมัติเดินทาง -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <span class="material-symbols-rounded">calendar_month</span>
+        <span>รายละเอียดวันเดินทางและพาหนะ</span>
+      </div>
+
+      <div class="field-row cols-3">
+        <!-- Date start -->
+        <div class="form-group">
+          <label for="date_start">ตั้งแต่วันที่ *</label>
+          <input type="date" id="date_start" name="date_start" value="{{ form_data.date_start or '' }}" required>
+          {% if errors.date_start %}
+            <span class="field-error">{{ errors.date_start }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Date end -->
+        <div class="form-group">
+          <label for="date_end">ถึงวันที่ *</label>
+          <input type="date" id="date_end" name="date_end" value="{{ form_data.date_end or '' }}" required>
+          {% if errors.date_end %}
+            <span class="field-error">{{ errors.date_end }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Real-time days display -->
+        <div class="form-group" style="display:flex; flex-direction:column; justify-content:flex-end;">
+          <label style="visibility:hidden;">จำนวนวัน</label>
+          <div class="days-display-card">
+            <span class="material-symbols-rounded" style="font-size:1.25rem;">event_available</span>
+            <span>ระยะเวลาปฏิบัติงาน:</span>
+            <span class="badge" id="totalDaysBadge">-</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row cols-2" style="margin-top:1rem;">
+        <!-- Vehicle -->
+        <div class="form-group">
+          <label for="vehicle_id">ยานพาหนะที่จะใช้เดินทาง *</label>
+          <select id="vehicle_id" name="vehicle_id" required>
+            <option value="">-- เลือกยานพาหนะ --</option>
+            {% for v in vehicles %}
+              <option value="{{ v.id }}" {% if form_data.vehicle_id|string == v.id|string %}selected{% endif %}>
+                {{ v.plate_number }} — {{ v.type_name }}{% if v.owner_name %} (ของ {{ v.owner_name }}){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          {% if errors.vehicle_id %}
+            <span class="field-error">{{ errors.vehicle_id }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Document Number (if existing) -->
+        <div class="form-group">
+          <label for="document_number">เลขที่หนังสือขออนุมัติ (ถ้ามี)</label>
+          <input type="text" id="document_number" name="document_number" 
+                 value="{{ form_data.document_number or '' }}" placeholder="เช่น ว 102/2569">
+        </div>
+      </div>
+
+      <div class="field-row cols-2" style="margin-top:1rem;">
+        <!-- Replacement staff dropdown -->
+        <div class="form-group">
+          <label for="acting_replacement_select">แต่งตั้งผู้รักษาการแทน</label>
+          <select id="acting_replacement_select">
+            <option value="">-- ไม่มี / ไม่บังคับ --</option>
+            {% for member in staff_members %}
+              <option value="{{ member.full_name }}"
+                {% if form_data.acting_replacement == member.full_name %}selected{% endif %}>
+                {{ member.full_name }} ({{ member.position or '-' }}) — {{ member.department or '' }}
+              </option>
+            {% endfor %}
+          </select>
+          <!-- Hidden input carries the text value to backend -->
+          <input type="hidden" id="acting_replacement" name="acting_replacement"
+                 value="{{ form_data.acting_replacement or '' }}">
+          <small style="color:var(--text-muted); font-size:0.8rem;">ไม่บังคับ — เลือกพนักงานที่แต่งตั้งให้รักษาการแทนในช่วงเดินทาง</small>
+        </div>
+
+        <!-- Replacement staff position -->
+        <div class="form-group">
+          <label for="acting_replacement_position">ตำแหน่งผู้รักษาการแทน</label>
+          <input type="text" id="acting_replacement_position" name="acting_replacement_position"
+                 value="{{ form_data.acting_replacement_position or '' }}" placeholder="ตำแหน่งผู้รักษาการแทน">
+          <small style="color:var(--text-muted); font-size:0.8rem;">ไม่บังคับ — ระบุตำแหน่งของผู้รักษาการแทน</small>
+        </div>
+      </div>
+
+      <!-- Purpose of travel -->
+      <div class="form-group" style="margin-top:1rem;">
+        <label for="purpose">เพื่อปฏิบัติงานตามหน้าที่/วัตถุประสงค์ *</label>
+        <textarea id="purpose" name="purpose" required 
+                  placeholder="เช่น เข้าดำเนินการซ่อมแซมและบำรุงรักษาเครื่องจักรควบคุมการผลิตน้ำ ณ การประปาส่วนภูมิภาคสาขาบางแสน และทดสอบประสิทธิภาพระบบส่งจ่าย" 
+                  rows="4">{{ form_data.purpose or '' }}</textarea>
+        {% if errors.purpose %}
+          <span class="field-error">{{ errors.purpose }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Actions block -->
+    <div class="form-actions" style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+      <a href="{% if is_edit %}/admin/{% else %}/{% endif %}" class="btn btn-secondary">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>ย้อนกลับ</span>
+      </a>
+      <button type="submit" class="btn btn-primary" style="padding-left:1.5rem; padding-right:1.5rem;">
+        <span class="material-symbols-rounded">{% if is_edit %}save{% else %}article{% endif %}</span>
+        <span>{% if is_edit %}บันทึกการแก้ไขและอัปเดตเอกสาร{% else %}บันทึกและสร้างเอกสารขออนุมัติ{% endif %}</span>
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // Companion Dropdown Template
+  const staffMembers = [
+    {% for member in staff_members %}
+      { id: {{ member.id }}, name: "{{ member.full_name }}", position: "{{ member.position or '-' }}" },
+    {% endfor %}
+  ];
+
+  const companionContainer = document.getElementById('companionsList');
+  const btnAddCompanion = document.getElementById('btnAddCompanion');
+  const dateStartInput = document.getElementById('date_start');
+  const dateEndInput = document.getElementById('date_end');
+  const totalDaysBadge = document.getElementById('totalDaysBadge');
+
+  // Real-time Date Difference Calculator
+  function calculateDays() {
+    const startVal = dateStartInput.value;
+    const endVal = dateEndInput.value;
+    if (startVal && endVal) {
+      const d1 = new Date(startVal);
+      const d2 = new Date(endVal);
+      const diffTime = d2 - d1;
+      if (diffTime >= 0) {
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        totalDaysBadge.textContent = diffDays + ' วัน';
+        dateEndInput.style.borderColor = '';
+      } else {
+        totalDaysBadge.textContent = 'วันที่เลือกไม่ถูกต้อง';
+        dateEndInput.style.borderColor = 'var(--danger)';
+      }
+    } else {
+      totalDaysBadge.textContent = '-';
+    }
+  }
+
+  dateStartInput.addEventListener('change', calculateDays);
+  dateEndInput.addEventListener('change', calculateDays);
+  calculateDays(); // Run once in case values are populated on load
+
+  // Sync acting_replacement select → hidden input & auto-fill position input
+  const actingSelect = document.getElementById('acting_replacement_select');
+  const actingHidden = document.getElementById('acting_replacement');
+  const actingPositionInput = document.getElementById('acting_replacement_position');
+  
+  if (actingSelect && actingHidden) {
+    actingSelect.addEventListener('change', () => {
+      const val = actingSelect.value;
+      actingHidden.value = val;
+      
+      // Auto-fill position if staff is selected
+      if (val) {
+        const matched = staffMembers.find(member => member.name === val);
+        if (matched && matched.position && matched.position !== '-') {
+          actingPositionInput.value = matched.position;
+        } else {
+          actingPositionInput.value = '';
+        }
+      } else {
+        actingPositionInput.value = '';
+      }
+    });
+    
+    // On initial load: sync hidden → select (restore on error)
+    if (actingHidden.value) {
+      actingSelect.value = actingHidden.value;
+    }
+  }
+
+  // Add dynamic companions with limit of 4
+  function createCompanionRow(selectedId = '') {
+    const row = document.createElement('div');
+    row.className = 'companion-row';
+    
+    let selectHTML = `<select name="companion_staff_id[]" required style="flex:1;">`;
+    selectHTML += `<option value="">-- เลือกผู้เดินทางร่วม --</option>`;
+    staffMembers.forEach(member => {
+      const isSel = selectedId && parseInt(selectedId) === member.id ? 'selected' : '';
+      selectHTML += `<option value="${member.id}" ${isSel}>${member.name} (${member.position})</option>`;
+    });
+    selectHTML += `</select>`;
+    
+    row.innerHTML = `
+      ${selectHTML}
+      <button type="button" class="btn-remove-companion" title="ลบรายชื่อนี้">
+        <span class="material-symbols-rounded">delete</span>
+      </button>
+    `;
+
+    row.querySelector('.btn-remove-companion').addEventListener('click', () => {
+      row.remove();
+    });
+
+    return row;
+  }
+
+  btnAddCompanion.addEventListener('click', () => {
+    const rowsCount = companionContainer.querySelectorAll('.companion-row').length;
+    if (rowsCount >= 4) {
+      alert('เลือกผู้ร่วมเดินทางได้ไม่เกิน 4 คน (เนื่องจากพื้นที่ของหน้าเอกสารจำกัด)');
+      return;
+    }
+    companionContainer.appendChild(createCompanionRow());
+  });
+
+  // Client-side submit validation just in case
+  const approvalForm = document.getElementById('approvalForm');
+  if (approvalForm) {
+    approvalForm.addEventListener('submit', (e) => {
+      const rowsCount = companionContainer.querySelectorAll('.companion-row').length;
+      if (rowsCount > 4) {
+        alert('เลือกผู้ร่วมเดินทางได้ไม่เกิน 4 คน');
+        e.preventDefault();
+        return false;
+      }
+    });
+  }
+
+  // Bind removal event to existing companion rows (rendered by server error fallback)
+  document.querySelectorAll('.btn-remove-companion').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.currentTarget.closest('.companion-row').remove();
+    });
+  });
+
+})();
+</script>
+{% endblock %}
